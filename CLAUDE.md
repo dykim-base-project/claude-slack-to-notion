@@ -139,13 +139,13 @@ feat: Slack 메시지 파싱 모듈 추가
 
 ## 이 프로젝트 (claude-slack-to-notion)
 
-Slack 메시지/스레드를 분석하여 Notion으로 정리하고 이슈를 생성하는 도구입니다.
+Slack 메시지/스레드를 분석하여 이슈/태스크로 구조화하고, Notion 페이지로 정리하는 도구입니다.
 
 ### 개요
 
 | 구분 | 내용 |
 |------|------|
-| 목적 | Slack 메시지/스레드 → Notion 정리 및 이슈 업 자동화 |
+| 목적 | Slack 메시지/스레드 → AI 분석 → Notion 페이지 정리 및 협업 |
 | 형태 | Claude Code 플러그인 |
 | 리모트 | `https://github.com/dykim-base-project/claude-slack-to-notion.git` |
 
