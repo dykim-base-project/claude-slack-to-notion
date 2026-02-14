@@ -2,14 +2,12 @@
 
 Slack 메시지/스레드를 분석하여 Notion 페이지로 정리하는 Claude Code 플러그인
 
-> 이 프로젝트는 현재 설계 단계입니다. 아래 기능은 구현 목표이며, 아직 동작하지 않습니다.
-
 ## 개요
 
 `claude-slack-to-notion`은 Slack 채널의 대화 내용을 수집·분석하여 이슈/태스크로 구조화하고, Notion 페이지로 자동 정리하는 도구입니다.
 정리된 Notion 페이지를 기반으로 팀 협업을 진행하는 워크플로우를 제공합니다.
 
-## 목표 기능
+### 주요 기능
 
 - **Slack 채널 메시지/스레드 수집**: Slack API를 통해 채널 메시지 및 스레드 댓글 조회
 - **메시지 분석 및 구조화**: AI 기반 내용 분석, 토픽 분류, 이슈/태스크 도출
@@ -17,64 +15,90 @@ Slack 메시지/스레드를 분석하여 Notion 페이지로 정리하는 Claud
 
 ## 요구사항
 
-- [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) 설치
-- GitHub CLI (`gh`) 설치
-- Slack API 토큰 (Bot Token, User Token)
-- Notion API 키 (Integration Token)
+- [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code)
+- Python 3.10 이상 (macOS: `brew install python3`)
+- Slack Bot Token
+- Notion API Key
+- Notion Parent Page ID
 
 ## 설치
 
-### devex 플러그인 기반 설치
-
 ```bash
-# 신규 설치
-curl -sL https://raw.githubusercontent.com/dykim-base-project/claude-devex/main/setup.sh | bash
-
-# 버전 확인
-curl -sL https://raw.githubusercontent.com/dykim-base-project/claude-devex/main/setup.sh | bash -s -- --check
-
-# 업데이트
-curl -sL https://raw.githubusercontent.com/dykim-base-project/claude-devex/main/setup.sh | bash -s -- --update
+# 로컬 클론 후 설치
+git clone https://github.com/dykim-base-project/claude-slack-to-notion.git
+claude --plugin-dir ./claude-slack-to-notion
 ```
 
-설치 후 `.claude/` 디렉토리와 워크플로우 스킬이 자동으로 구성됩니다.
+> 최초 실행 시 Python 환경(venv)이 자동으로 설정됩니다.
+> 현재 **macOS/Linux**만 지원합니다.
 
 ## 설정
 
-### 환경변수 또는 설정 파일
-
-API 토큰과 키는 환경변수 또는 `.claude/settings.local.json`에 저장합니다. (Git 추적 금지)
-
-| 파일 | 범위 | Git 추적 | 용도 |
-|------|------|:--------:|------|
-| `.claude/settings.json` | 공통 설정 | O | 프로젝트 공통 권한, 기본값 |
-| `.claude/settings.local.json` | 로컬 전용 | X | API 토큰, 개인 설정 |
-| `.claude/project-profile.md` | 프로젝트 프로필 | O | 스킬 동작 조정용 프로필 |
-
 ### API 토큰 설정
 
-API 토큰 관리 방식은 구현 시 결정 예정입니다. 환경변수 방식을 우선 검토합니다.
+API 토큰은 환경변수로 설정합니다.
 
 ```bash
 export SLACK_BOT_TOKEN="xoxb-..."
-export SLACK_USER_TOKEN="xoxp-..."
 export NOTION_API_KEY="secret_..."
+export NOTION_PARENT_PAGE_ID="..."
 ```
+
+#### Slack Bot Token 발급
+
+1. [Slack API](https://api.slack.com/apps) 접속
+2. "Create New App" → "From scratch" 선택
+3. App 이름 및 Workspace 선택
+4. "OAuth & Permissions" → "Bot Token Scopes" 추가:
+   - `channels:history` (공개 채널 메시지 읽기)
+   - `channels:read` (채널 목록 조회)
+   - `users:read` (사용자 정보 조회)
+5. "Install to Workspace" 클릭
+6. 발급된 "Bot User OAuth Token" 복사 (xoxb-로 시작)
+
+#### Notion API Key 발급
+
+1. [Notion Integrations](https://www.notion.so/my-integrations) 접속
+2. "New integration" 클릭
+3. Integration 이름 입력, Workspace 선택
+4. "Submit" 후 발급된 "Internal Integration Token" 복사 (secret_로 시작)
+5. Notion에서 정리할 페이지로 이동
+6. 우측 상단 "..." → "Add connections" → 생성한 Integration 연결
+
+#### Notion Parent Page ID 확인
+
+1. Notion에서 정리할 상위 페이지 열기
+2. 브라우저 주소창 URL 확인: `https://www.notion.so/workspace/{PAGE_ID}?v=...`
+3. `{PAGE_ID}` 부분 복사 (32자 문자열)
 
 ## 사용 방법
 
-### 워크플로우 스킬
+Claude Code에서 자연어로 사용할 수 있습니다.
 
-| 스킬 | 명령어 | 설명 |
-|------|--------|------|
-| 이슈 생성 | `/github-issue` | GitHub 이슈 생성, 라벨 매핑, 브랜치명 제안 |
-| 명세 작성 | `/spec` | 요구사항 분석, 아키텍처 설계, 다이어그램 생성 |
-| 구현 | `/implement` | 설계 문서 기반 코드 구현 |
-| 커밋 | `/commit` | diff 리뷰, 커밋 메시지 제안 및 커밋 |
-| PR 생성 | `/github-pr` | PR 생성, 이슈 연결 |
-| 전체 사이클 | `/cycle` | 이슈 → 플랜 → 구현 → 리뷰 → PR → 검증 → 완료 |
+### 사용 예시
 
-## 목표 데이터 흐름
+```
+Slack #general 채널 메시지 조회해줘
+```
+
+```
+#design 채널의 최근 50개 메시지를 Notion에 정리해줘
+```
+
+```
+이 스레드 내용 요약해서 Notion 페이지로 만들어줘
+```
+
+## 제공 도구
+
+| 도구 | 설명 |
+|------|------|
+| `list_channels` | Slack 채널 목록 조회 |
+| `fetch_messages` | 특정 채널의 메시지 조회 |
+| `fetch_thread` | 특정 스레드의 전체 메시지 조회 |
+| `fetch_channel_info` | 채널 상세 정보 조회 |
+
+## 데이터 흐름
 
 ```mermaid
 graph LR
@@ -93,32 +117,27 @@ graph LR
 
 ```
 claude-slack-to-notion/
-├── CLAUDE.md                        # AI 협업 가이드 (프로젝트 규칙)
+├── .claude-plugin/
+│   └── plugin.json                  # 플러그인 매니페스트
+├── .mcp.json                        # MCP 서버 설정
+├── scripts/
+│   └── run-server.sh                # 자동 환경 설정 스크립트
+├── src/
+│   └── slack_to_notion/
+│       ├── mcp_server.py            # MCP 서버 (도구 제공)
+│       ├── slack_client.py          # Slack API 연동
+│       ├── analyzer.py              # AI 분석 엔진
+│       ├── notion_client.py         # Notion API 연동
+│       └── config.py                # 설정 관리
+├── pyproject.toml                   # Python 패키지 설정
 ├── README.md                        # 이 파일
-├── .gitignore
-└── .claude/
-    ├── README.md                    # 워크플로우 가이드
-    ├── settings.json                # 공통 설정 [Git 추적]
-    ├── settings.local.json          # 로컬 설정 [Git 무시]
-    ├── project-profile.md           # 프로젝트 프로필 [Git 추적]
-    ├── .devex-version               # devex 버전 관리
-    ├── .gh-token                    # GitHub CLI 토큰 [Git 무시]
-    └── skills/                      # 워크플로우 스킬
-        ├── github-issue/SKILL.md    # /github-issue
-        ├── spec/SKILL.md            # /spec
-        ├── implement/SKILL.md       # /implement
-        ├── commit/SKILL.md          # /commit
-        ├── github-pr/SKILL.md       # /github-pr
-        └── cycle/SKILL.md           # /cycle
+└── .gitignore
 ```
-
-## 개발 가이드
-
-Git Flow, 브랜치 전략, 커밋 컨벤션, 개발 사이클 등 개발 프로세스는 [CLAUDE.md](./CLAUDE.md)를 참고하세요.
 
 ## 제약사항
 
-- **API 토큰 관리**: Slack API 토큰, Notion API 키는 환경변수 또는 `.claude/settings.local.json`로 관리 (Git 추적 금지)
+- **플랫폼**: macOS/Linux만 지원 (Windows 지원 예정)
+- **API 토큰 관리**: Slack API 토큰, Notion API 키는 환경변수로 관리 (Git 추적 금지)
 - **개인 메시지(DM) 제외**: 보안상 개인 DM 수집 지원하지 않음
 - **API Rate Limit**: Slack/Notion API Rate Limit 고려 필요 (과도한 요청 시 제한 발생 가능)
 - **Bot 권한**: Slack Bot이 조회할 채널에 미리 초대되어 있어야 함
@@ -130,3 +149,7 @@ Git Flow, 브랜치 전략, 커밋 컨벤션, 개발 사이클 등 개발 프로
 ## 기여
 
 이슈 및 PR은 [GitHub 레포지토리](https://github.com/dykim-base-project/claude-slack-to-notion)에서 관리합니다.
+
+---
+
+**개발 가이드**: Git Flow, 브랜치 전략, 커밋 컨벤션 등 개발 프로세스는 [CLAUDE.md](./CLAUDE.md)를 참고하세요.
