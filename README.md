@@ -1,20 +1,19 @@
 # claude-slack-to-notion
 
-Slack 메시지/스레드를 분석하여 Notion으로 정리하고 이슈를 생성하는 자동화 Claude Code 플러그인
+Slack 메시지/스레드를 분석하여 Notion 페이지로 정리하는 Claude Code 플러그인
 
 > 이 프로젝트는 현재 설계 단계입니다. 아래 기능은 구현 목표이며, 아직 동작하지 않습니다.
 
 ## 개요
 
-`claude-slack-to-notion`은 Slack 채널의 대화 내용을 수집·분석하여 Notion 페이지로 자동 정리하고, 필요시 GitHub 이슈를 생성하는 도구입니다.
-Claude Code CLI 환경에서 AI 기반 워크플로우 스킬을 활용하여 Slack 데이터를 구조화된 문서로 변환합니다.
+`claude-slack-to-notion`은 Slack 채널의 대화 내용을 수집·분석하여 이슈/태스크로 구조화하고, Notion 페이지로 자동 정리하는 도구입니다.
+정리된 Notion 페이지를 기반으로 팀 협업을 진행하는 워크플로우를 제공합니다.
 
 ## 목표 기능
 
 - **Slack 채널 메시지/스레드 수집**: Slack API를 통해 채널 메시지 및 스레드 댓글 조회
-- **메시지 분석 및 구조화**: AI 기반 내용 분석, 토픽 분류, 요약 생성
-- **Notion 페이지/데이터베이스 자동 생성**: 분석 결과를 Notion 페이지로 자동 작성
-- **이슈 자동 업**: Notion 정리 내용을 기반으로 GitHub 이슈 자동 생성 (`/github-issue` 스킬 연동)
+- **메시지 분석 및 구조화**: AI 기반 내용 분석, 토픽 분류, 이슈/태스크 도출
+- **Notion 페이지 자동 생성**: 분석된 이슈/태스크를 Notion 페이지로 작성하여 협업 기반 제공
 
 ## 요구사항
 
@@ -79,16 +78,16 @@ export NOTION_API_KEY="secret_..."
 
 ```mermaid
 graph LR
-    A["Slack API"] -->|메시지 조회| B["분석 엔진"]
-    B -->|구조화| C["Notion API"]
+    A["Slack API"] -->|메시지/스레드 조회| B["AI 분석 엔진"]
+    B -->|이슈/태스크 구조화| C["Notion API"]
     C -->|페이지 생성| D["Notion Database"]
-    B -->|이슈 생성| E["GitHub Issue"]
+    D -->|협업 기반| E["팀 협업"]
 ```
 
 1. Slack API를 통해 채널 메시지 및 스레드 수집
-2. AI 기반 분석으로 토픽 분류, 요약 생성
-3. Notion API로 페이지/데이터베이스 자동 작성
-4. 필요시 GitHub 이슈 자동 생성
+2. AI 기반 분석으로 토픽 분류, 이슈/태스크 도출
+3. Notion API로 구조화된 페이지 자동 작성
+4. 정리된 Notion 페이지를 기반으로 팀 협업 진행
 
 ## 프로젝트 구조
 
