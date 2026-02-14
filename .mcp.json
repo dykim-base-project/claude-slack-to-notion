@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "slack-to-notion": {
+      "command": "bash",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/run-server.sh"],
+      "env": {
+        "SLACK_BOT_TOKEN": "${SLACK_BOT_TOKEN}",
+        "NOTION_API_KEY": "${NOTION_API_KEY}",
+        "NOTION_PARENT_PAGE_ID": "${NOTION_PARENT_PAGE_ID}"
+      }
+    }
+  }
+}
