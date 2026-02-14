@@ -9,6 +9,15 @@ Thumbs.db
 # OMC 상태
 .omc/
 
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+.env
+
 # IDE
 .idea/
 .vscode/
