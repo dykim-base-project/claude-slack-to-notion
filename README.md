@@ -75,18 +75,6 @@ export NOTION_API_KEY="secret_..."
 | PR 생성 | `/github-pr` | PR 생성, 이슈 연결 |
 | 전체 사이클 | `/cycle` | 이슈 → 플랜 → 구현 → 리뷰 → PR → 검증 → 완료 |
 
-### 기본 흐름
-
-```
-1. /github-issue    : "Slack 채널 A를 Notion으로 정리" 이슈 생성
-2. /spec            : 데이터 수집 흐름, API 연동 설계 작성
-3. /implement       : 코드 구현 (Slack API, Notion API 연동)
-4. /commit          : 변경 사항 커밋
-5. /github-pr       : PR 생성 및 이슈 연결
-```
-
-또는 `/cycle` 스킬로 전체 사이클을 자동화할 수 있습니다.
-
 ## 목표 데이터 흐름
 
 ```mermaid
@@ -127,60 +115,7 @@ claude-slack-to-notion/
 
 ## 개발 가이드
 
-### Git Flow
-
-```
-main ────────────────●─────
-       \            /
-        feature/12 ─
-```
-
-- `develop` 브랜치 없음 (소규모 도구 레포)
-- PR 타겟: `main` 직접
-- 브랜치 전략: `feature/{번호}`, `fix/{번호}`, `docs/{번호}`, `refactor/{번호}`, `chore/{번호}`
-
-### 브랜치 전략
-
-| 브랜치 | 용도 |
-|--------|------|
-| `main` | 배포 가능한 상태 |
-| `feature/{번호}` | 기능 개발 |
-| `fix/{번호}` | 버그 수정 |
-| `docs/{번호}` | 문서 작업 |
-| `refactor/{번호}` | 리팩토링 |
-| `chore/{번호}` | 기타 |
-
-### 커밋 컨벤션
-
-```
-타입: 수정내용 요약
-
-* 상세 내용 1
-* 상세 내용 2
-```
-
-| 타입 | 용도 |
-|------|------|
-| `init` | 초기 설정 |
-| `feat` | 새 기능 |
-| `fix` | 버그 수정 |
-| `docs` | 문서 |
-| `refactor` | 리팩토링 |
-| `chore` | 기타 |
-
-### 개발 사이클
-
-```
-Issue → Spec → Implement → Commit → PR
-```
-
-1. `/github-issue`로 이슈 생성 (자동 브랜치 생성)
-2. `/spec`으로 요구사항 분석 및 설계 명세 작성
-3. `/implement`로 코드 구현
-4. `/commit`으로 변경 사항 커밋 (사용자 승인 후)
-5. `/github-pr`로 PR 생성 및 이슈 연결
-
-또는 `/cycle` 스킬로 전체 사이클을 자동화할 수 있습니다.
+Git Flow, 브랜치 전략, 커밋 컨벤션, 개발 사이클 등 개발 프로세스는 [CLAUDE.md](./CLAUDE.md)를 참고하세요.
 
 ## 제약사항
 
