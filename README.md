@@ -62,40 +62,120 @@ claude --plugin-dir ./claude-slack-to-notion
 
 ### API 토큰 설정
 
-API 토큰은 환경변수로 설정합니다.
+이 플러그인은 Slack과 Notion에 접근하기 위해 3개의 토큰이 필요합니다.
+각 토큰은 한 번만 발급하면 계속 사용할 수 있습니다.
 
-```bash
-export SLACK_BOT_TOKEN="xoxb-..."
-export NOTION_API_KEY="secret_..."
-export NOTION_PARENT_PAGE_ID="..."
+| 토큰 | 용도 | 형식 |
+|------|------|------|
+| `SLACK_BOT_TOKEN` | Slack 채널 메시지 읽기 | `xoxb-`로 시작 |
+| `NOTION_API_KEY` | Notion 페이지 생성 | `secret_`로 시작 |
+| `NOTION_PARENT_PAGE_ID` | 분석 결과가 저장될 Notion 페이지 | 32자 영숫자 |
+
+#### 1단계: Slack Bot Token 발급
+
+Slack Bot은 채널의 메시지를 읽어오는 역할을 합니다.
+Bot이 **초대된 채널**의 메시지만 읽을 수 있으므로, 사용할 채널에 Bot을 초대해야 합니다.
+
+1. [Slack API](https://api.slack.com/apps) 페이지에 접속하여 로그인합니다.
+2. **"Create New App"** 버튼 클릭 → **"From scratch"** 선택
+3. App 이름(예: `slack-to-notion`)을 입력하고, 사용할 Workspace를 선택한 뒤 **"Create App"** 클릭
+4. 왼쪽 메뉴에서 **"OAuth & Permissions"** 클릭
+5. 아래로 스크롤하여 **"Bot Token Scopes"** 섹션에서 다음 4개 권한을 추가합니다:
+
+| 스코프 | 설명 |
+|--------|------|
+| `channels:history` | 공개 채널의 메시지를 읽습니다 |
+| `channels:read` | 채널 목록을 조회합니다 |
+| `groups:history` | 비공개 채널의 메시지를 읽습니다 |
+| `users:read` | 메시지 작성자의 이름을 확인합니다 |
+
+6. 페이지 상단으로 스크롤하여 **"Install to Workspace"** 클릭 → **"허용"** 클릭
+7. **"Bot User OAuth Token"** 이 표시됩니다. 복사 버튼을 눌러 토큰을 복사합니다. (`xoxb-`로 시작하는 문자열)
+
+**Bot을 채널에 초대하기:**
+
+Bot은 초대된 채널만 접근할 수 있습니다. 메시지를 수집할 각 채널에서 Bot을 초대하세요.
+
+- **방법 1**: 채널 메시지 입력창에 `/invite @slack-to-notion` 입력 (App 이름으로 검색)
+- **방법 2**: 채널 상단의 채널 이름 클릭 → **"Integrations"** 탭 → **"Add apps"** → App 검색하여 추가
+
+> 여러 채널에서 사용하려면 각 채널마다 Bot을 초대해야 합니다.
+
+#### 2단계: Notion API Key 발급
+
+Notion Integration은 분석 결과를 Notion 페이지로 작성하는 역할을 합니다.
+
+1. [Notion Integrations](https://www.notion.so/my-integrations) 페이지에 접속하여 로그인합니다.
+2. **"New integration"** 버튼 클릭
+3. 다음 항목을 입력합니다:
+   - **Name**: Integration 이름 (예: `slack-to-notion`)
+   - **Associated workspace**: 사용할 Notion 워크스페이스 선택
+4. **"Capabilities"** 섹션에서 다음이 체크되어 있는지 확인합니다:
+   - Read content
+   - Update content
+   - Insert content
+5. **"Submit"** 클릭
+6. **"Internal Integration Secret"** 이 표시됩니다. **"Show"** → **"Copy"** 버튼을 눌러 토큰을 복사합니다. (`secret_`로 시작하는 문자열)
+
+**Integration을 Notion 페이지에 연결하기:**
+
+Integration은 연결된 페이지만 접근할 수 있습니다. 분석 결과를 저장할 페이지에 Integration을 연결하세요.
+
+1. Notion에서 분석 결과를 저장할 페이지를 엽니다 (새 페이지를 만들어도 됩니다)
+2. 페이지 우측 상단의 **`...`** (점 3개) 버튼 클릭
+3. **"Connect to"** 항목에서 위에서 만든 Integration 이름(예: `slack-to-notion`)을 검색하여 선택
+4. **"Confirm"** 클릭
+
+#### 3단계: Notion Parent Page ID 확인
+
+분석 결과가 저장될 Notion 페이지의 ID를 확인합니다.
+
+1. 2단계에서 Integration을 연결한 Notion 페이지를 **브라우저**에서 엽니다
+2. 주소창의 URL을 확인합니다. 형식은 다음과 같습니다:
+
+```
+https://www.notion.so/워크스페이스/페이지제목-abc1234567890def1234567890abcdef
+                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                                              이 32자가 Page ID 입니다
 ```
 
-#### Slack Bot Token 발급
+3. URL 마지막의 **32자리 영숫자 문자열**을 복사합니다 (하이픈 `-` 뒤의 부분)
 
-1. [Slack API](https://api.slack.com/apps) 접속
-2. "Create New App" → "From scratch" 선택
-3. App 이름 및 Workspace 선택
-4. "OAuth & Permissions" → "Bot Token Scopes" 추가:
-   - `channels:history` (공개 채널 메시지 읽기)
-   - `channels:read` (채널 목록 조회)
-   - `users:read` (사용자 정보 조회)
-5. "Install to Workspace" 클릭
-6. 발급된 "Bot User OAuth Token" 복사 (xoxb-로 시작)
+> URL에 `?v=...` 같은 추가 파라미터가 붙어 있다면, `?` 앞까지만 사용합니다.
 
-#### Notion API Key 발급
+#### 4단계: 환경변수 설정
 
-1. [Notion Integrations](https://www.notion.so/my-integrations) 접속
-2. "New integration" 클릭
-3. Integration 이름 입력, Workspace 선택
-4. "Submit" 후 발급된 "Internal Integration Token" 복사 (secret_로 시작)
-5. Notion에서 정리할 페이지로 이동
-6. 우측 상단 "..." → "Add connections" → 생성한 Integration 연결
+발급받은 3개 토큰을 환경변수로 설정합니다. 프로젝트 폴더에 `.env` 파일을 만드는 방법을 권장합니다.
 
-#### Notion Parent Page ID 확인
+**터미널에서 다음 명령어를 실행합니다:**
 
-1. Notion에서 정리할 상위 페이지 열기
-2. 브라우저 주소창 URL 확인: `https://www.notion.so/workspace/{PAGE_ID}?v=...`
-3. `{PAGE_ID}` 부분 복사 (32자 문자열)
+```bash
+# 프로젝트 폴더로 이동
+cd claude-slack-to-notion
+
+# .env.example 파일을 복사하여 .env 파일 생성
+cp .env.example .env
+```
+
+**생성된 `.env` 파일을 텍스트 편집기로 열어 토큰 값을 입력합니다:**
+
+```bash
+# macOS 기본 편집기로 열기
+open -e .env
+
+# 또는 VS Code로 열기
+code .env
+```
+
+**`.env` 파일 내용을 다음과 같이 수정합니다:**
+
+```
+SLACK_BOT_TOKEN=xoxb-1234-5678-abcdefgh     ← 1단계에서 복사한 값
+NOTION_API_KEY=secret_abc123def456...         ← 2단계에서 복사한 값
+NOTION_PARENT_PAGE_ID=abc1234567890def...     ← 3단계에서 복사한 값
+```
+
+> `.env` 파일에는 토큰이 포함되어 있으므로 Git에 업로드되지 않도록 `.gitignore`에 이미 등록되어 있습니다.
 
 ### 사용 방법
 
@@ -159,10 +239,11 @@ Slack #general 채널 메시지 조회해줘
 | 증상 | 원인 | 해결 방법 |
 |------|------|-----------|
 | `[오류] python3이 설치되지 않았습니다.` | Python 3 미설치 | macOS: `brew install python3` |
-| `SLACK_BOT_TOKEN` 관련 오류 | 환경변수 미설정 | `export SLACK_BOT_TOKEN="xoxb-..."` 실행 |
-| `not_in_channel` 에러 | Bot이 채널에 초대되지 않음 | Slack 채널에서 Bot을 초대 (`/invite @봇이름`) |
-| `invalid_auth` 에러 | 토큰이 잘못됨 | Slack App 설정에서 Bot Token 재확인 |
-| Notion 페이지 생성 실패 | Integration 연결 안 됨 | Notion 페이지에서 "Add connections"으로 Integration 연결 |
+| `SLACK_BOT_TOKEN 환경변수가 설정되지 않았습니다` | `.env` 파일 미생성 또는 토큰 미입력 | [4단계: 환경변수 설정](#4단계-환경변수-설정) 참고 |
+| `not_in_channel` 에러 | Bot이 해당 채널에 초대되지 않음 | 채널에서 `/invite @봇이름` 실행 ([1단계](#1단계-slack-bot-token-발급)의 "Bot을 채널에 초대하기" 참고) |
+| `invalid_auth` 에러 | 토큰이 잘못되었거나 만료됨 | [Slack API](https://api.slack.com/apps)에서 Bot Token 재확인 후 `.env` 파일 수정 |
+| `Notion API 키가 올바르지 않습니다` | Notion API Key가 잘못됨 | [Notion Integrations](https://www.notion.so/my-integrations)에서 Secret 재확인 |
+| `Notion 페이지를 찾을 수 없습니다` | Integration이 페이지에 연결되지 않음 | [2단계](#2단계-notion-api-key-발급)의 "Integration을 Notion 페이지에 연결하기" 참고 |
 | `패키지 설치에 실패했습니다` | 네트워크 문제 또는 Python 버전 | 네트워크 확인 + Python 3.10 이상인지 확인 |
 
 ## 개발 철학
