@@ -1,15 +1,23 @@
 """Slack-to-Notion MCP 서버.
 
-FastMCP를 사용하여 Slack 메시지 수집 기능을 MCP 도구로 제공한다.
+FastMCP를 사용하여 Slack 수집 → 분석 → Notion 생성 기능을 MCP 도구로 제공한다.
 """
 
 import json
 import logging
 import os
 import sys
+from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
+from .analyzer import (
+    ANALYSIS_GUIDE_EXAMPLES,
+    format_messages_for_analysis,
+    get_analysis_guide,
+    save_result,
+)
+from .notion_client import NotionClient, NotionClientError
 from .slack_client import SlackClient, SlackClientError
 
 # stdout은 MCP 프로토콜용이므로 로깅은 stderr로
@@ -23,19 +31,13 @@ logger = logging.getLogger(__name__)
 # MCP 서버 인스턴스
 mcp = FastMCP("slack-to-notion")
 
-# SlackClient 인스턴스 (lazy init)
+# 클라이언트 인스턴스 (lazy init)
 _slack_client: SlackClient | None = None
+_notion_client: NotionClient | None = None
 
 
 def _get_slack_client() -> SlackClient:
-    """SlackClient 인스턴스를 반환한다. 없으면 초기화.
-
-    Returns:
-        SlackClient 인스턴스
-
-    Raises:
-        RuntimeError: SLACK_BOT_TOKEN이 설정되지 않은 경우
-    """
+    """SlackClient 인스턴스를 반환한다. 없으면 초기화."""
     global _slack_client
     if _slack_client is None:
         token = os.environ.get("SLACK_BOT_TOKEN")
@@ -47,6 +49,26 @@ def _get_slack_client() -> SlackClient:
         _slack_client = SlackClient(token)
         logger.info("SlackClient 초기화 완료")
     return _slack_client
+
+
+def _get_notion_client() -> NotionClient:
+    """NotionClient 인스턴스를 반환한다. 없으면 초기화."""
+    global _notion_client
+    if _notion_client is None:
+        api_key = os.environ.get("NOTION_API_KEY")
+        if not api_key:
+            raise RuntimeError(
+                "NOTION_API_KEY 환경변수가 설정되지 않았습니다. "
+                ".mcp.json 파일의 env 섹션을 확인하세요."
+            )
+        _notion_client = NotionClient(api_key)
+        logger.info("NotionClient 초기화 완료")
+    return _notion_client
+
+
+# ──────────────────────────────────────────────
+# Slack 도구
+# ──────────────────────────────────────────────
 
 
 @mcp.tool()
@@ -136,6 +158,145 @@ def fetch_channel_info(channel_id: str) -> str:
     except Exception as e:
         logger.exception("예상치 못한 에러 발생")
         return f"[에러] 채널 정보 조회 실패: {e!s}"
+
+
+# ──────────────────────────────────────────────
+# 분석 도구
+# ──────────────────────────────────────────────
+
+
+@mcp.tool()
+def get_analysis_guide_tool() -> str:
+    """분석 방향 안내를 반환한다.
+
+    사용자에게 어떤 방식으로 정리할지 질문할 때 사용한다.
+    예시와 팁을 포함한 안내 텍스트를 반환한다.
+
+    Returns:
+        분석 방향 안내 텍스트 (예시 포함)
+    """
+    return get_analysis_guide()
+
+
+@mcp.tool()
+def format_messages(
+    channel_id: str,
+    channel_name: str,
+    limit: int = 100,
+    oldest: str | None = None,
+) -> str:
+    """Slack 채널 메시지를 수집하고 AI 분석용 텍스트로 포맷팅한다.
+
+    메시지 수집과 포맷팅을 한 번에 수행한다.
+
+    Args:
+        channel_id: 채널 ID (예: C0123456789)
+        channel_name: 채널 이름 (포맷팅 헤더에 표시)
+        limit: 조회할 메시지 수 (기본값: 100)
+        oldest: 시작 타임스탬프 (해당 시점 이후 메시지만 조회)
+
+    Returns:
+        AI 분석용으로 포맷팅된 메시지 텍스트
+    """
+    try:
+        client = _get_slack_client()
+        messages = client.fetch_channel_messages(channel_id, limit, oldest)
+        return format_messages_for_analysis(messages, channel_name)
+    except SlackClientError as e:
+        return f"[에러] {e.message}"
+    except Exception as e:
+        logger.exception("예상치 못한 에러 발생")
+        return f"[에러] 메시지 포맷팅 실패: {e!s}"
+
+
+# ──────────────────────────────────────────────
+# Notion 도구
+# ──────────────────────────────────────────────
+
+
+@mcp.tool()
+def create_notion_page(
+    title: str,
+    content: str,
+    channel_name: str,
+    period: str,
+) -> str:
+    """분석 결과를 Notion 페이지로 생성한다.
+
+    자유 형식 텍스트(마크다운)를 Notion 블록으로 변환하여 페이지를 생성한다.
+    중복 체크를 수행하여 동일 채널/기간의 페이지가 이미 있으면 안내한다.
+
+    Args:
+        title: 페이지 제목 (예: "[general] 분석 결과 - 2024-01-15")
+        content: 분석 결과 텍스트 (마크다운 형식 지원: #, ##, ###, -, *)
+        channel_name: 채널 이름
+        period: 분석 기간 (예: "2024-01-01 ~ 2024-01-15")
+
+    Returns:
+        생성된 Notion 페이지 URL 또는 에러 메시지
+    """
+    try:
+        client = _get_notion_client()
+        parent_page_id = os.environ.get("NOTION_PARENT_PAGE_ID")
+        if not parent_page_id:
+            return "[에러] NOTION_PARENT_PAGE_ID 환경변수가 설정되지 않았습니다."
+
+        # DB 조회/생성
+        database_id = client.get_or_create_database(parent_page_id)
+
+        # 중복 체크
+        if client.check_duplicate(database_id, channel_name, period):
+            return (
+                f"[안내] 이미 동일한 분석 결과가 존재합니다 "
+                f"(채널: {channel_name}, 기간: {period}). "
+                f"새로 생성하려면 기간을 변경하세요."
+            )
+
+        # 블록 변환 + 페이지 생성
+        blocks = client.build_page_blocks(content)
+        url = client.create_analysis_page(
+            database_id, title, channel_name, period, blocks
+        )
+        return f"Notion 페이지가 생성되었습니다: {url}"
+
+    except NotionClientError as e:
+        return f"[에러] {e.message}"
+    except Exception as e:
+        logger.exception("예상치 못한 에러 발생")
+        return f"[에러] Notion 페이지 생성 실패: {e!s}"
+
+
+@mcp.tool()
+def save_analysis_result(data_json: str, filename: str = "") -> str:
+    """분석 결과를 로컬 JSON 파일로 백업한다.
+
+    Notion 업로드 실패 시 재시도하거나, 분석 히스토리를 보관할 때 사용한다.
+
+    Args:
+        data_json: 저장할 데이터 (JSON 문자열)
+        filename: 파일명 (미지정 시 타임스탬프 기반 자동 생성)
+
+    Returns:
+        저장된 파일 경로 또는 에러 메시지
+    """
+    try:
+        from datetime import datetime
+
+        data = json.loads(data_json)
+
+        if not filename:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"analysis_{timestamp}.json"
+
+        save_dir = Path(".claude/slack-to-notion/history")
+        path = save_result(data, save_dir / filename)
+        return f"분석 결과가 저장되었습니다: {path}"
+
+    except json.JSONDecodeError:
+        return "[에러] 유효하지 않은 JSON 형식입니다."
+    except Exception as e:
+        logger.exception("예상치 못한 에러 발생")
+        return f"[에러] 저장 실패: {e!s}"
 
 
 if __name__ == "__main__":
