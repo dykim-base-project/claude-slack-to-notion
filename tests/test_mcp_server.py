@@ -128,6 +128,58 @@ class TestFetchThreads:
             assert "Channel: C0AF01XMZB8" in result
 
 
+class TestSavePreferenceTool:
+    """save_preference_tool 도구 테스트."""
+
+    def test_success(self, tmp_path):
+        pref_path = tmp_path / "preferences.md"
+        with patch("slack_to_notion.mcp_server.save_preference") as mock_save:
+            mock_save.return_value = pref_path
+            from slack_to_notion.mcp_server import save_preference_tool
+            result = save_preference_tool("회의록 위주로 정리해줘")
+            assert "저장되었습니다" in result
+            mock_save.assert_called_once_with("회의록 위주로 정리해줘")
+
+
+class TestGetPreferences:
+    """get_preferences 도구 테스트."""
+
+    def test_with_preferences(self):
+        with patch("slack_to_notion.mcp_server.load_preferences") as mock_load:
+            mock_load.return_value = "## 분석 선호도\n\n- [2026-02-16] 결정사항 위주로\n"
+            from slack_to_notion.mcp_server import get_preferences
+            result = get_preferences()
+            assert "분석 선호도" in result
+
+    def test_empty(self):
+        with patch("slack_to_notion.mcp_server.load_preferences") as mock_load:
+            mock_load.return_value = ""
+            from slack_to_notion.mcp_server import get_preferences
+            result = get_preferences()
+            assert "없습니다" in result
+
+
+class TestListAnalysisHistory:
+    """list_analysis_history 도구 테스트."""
+
+    def test_with_history(self):
+        with patch("slack_to_notion.mcp_server.list_history") as mock_list:
+            mock_list.return_value = [
+                {"filename": "analysis_20260216.json", "path": "/tmp/a.json", "summary": "마케팅 분석"},
+            ]
+            from slack_to_notion.mcp_server import list_analysis_history
+            result = list_analysis_history()
+            assert "1건" in result
+            assert "마케팅 분석" in result
+
+    def test_empty(self):
+        with patch("slack_to_notion.mcp_server.list_history") as mock_list:
+            mock_list.return_value = []
+            from slack_to_notion.mcp_server import list_analysis_history
+            result = list_analysis_history()
+            assert "없습니다" in result
+
+
 class TestCreateNotionPageBlockConversion:
     """페이지 생성 시 블록 변환이 올바르게 전달되는지 테스트."""
 

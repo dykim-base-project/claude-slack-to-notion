@@ -10,7 +10,10 @@ from slack_to_notion.analyzer import (
     format_messages_for_analysis,
     format_threads_for_analysis,
     get_analysis_guide,
+    list_history,
+    load_preferences,
     load_result,
+    save_preference,
     save_result,
 )
 
@@ -164,3 +167,91 @@ class TestSaveAndLoadResult:
     def test_load_nonexistent_file(self, tmp_path):
         with pytest.raises(FileNotFoundError):
             load_result(tmp_path / "nonexistent.json")
+
+
+class TestSavePreference:
+    """사용자 선호도 저장 테스트."""
+
+    def test_save_creates_file(self, tmp_path):
+        pref_path = tmp_path / "preferences.md"
+        save_preference("회의록은 결정사항 위주로", pref_path)
+        assert pref_path.exists()
+        content = pref_path.read_text(encoding="utf-8")
+        assert "분석 선호도" in content
+        assert "회의록은 결정사항 위주로" in content
+
+    def test_save_appends(self, tmp_path):
+        pref_path = tmp_path / "preferences.md"
+        save_preference("첫 번째 선호", pref_path)
+        save_preference("두 번째 선호", pref_path)
+        content = pref_path.read_text(encoding="utf-8")
+        assert "첫 번째 선호" in content
+        assert "두 번째 선호" in content
+
+    def test_save_includes_timestamp(self, tmp_path):
+        pref_path = tmp_path / "preferences.md"
+        save_preference("테스트", pref_path)
+        content = pref_path.read_text(encoding="utf-8")
+        # [YYYY-MM-DD] 형식 확인
+        assert "[2" in content  # 2026- 등
+
+    def test_save_creates_parent_dirs(self, tmp_path):
+        pref_path = tmp_path / "sub" / "dir" / "preferences.md"
+        save_preference("테스트", pref_path)
+        assert pref_path.exists()
+
+
+class TestLoadPreferences:
+    """선호도 로드 테스트."""
+
+    def test_load_existing(self, tmp_path):
+        pref_path = tmp_path / "preferences.md"
+        save_preference("액션 아이템 위주로", pref_path)
+        content = load_preferences(pref_path)
+        assert "액션 아이템 위주로" in content
+
+    def test_load_nonexistent(self, tmp_path):
+        result = load_preferences(tmp_path / "nonexistent.md")
+        assert result == ""
+
+
+class TestListHistory:
+    """히스토리 조회 테스트."""
+
+    def test_empty_dir(self, tmp_path):
+        result = list_history(history_dir=tmp_path)
+        assert result == []
+
+    def test_nonexistent_dir(self, tmp_path):
+        result = list_history(history_dir=tmp_path / "nonexistent")
+        assert result == []
+
+    def test_lists_json_files(self, tmp_path):
+        (tmp_path / "a.json").write_text('{"title": "첫 분석"}', encoding="utf-8")
+        (tmp_path / "b.json").write_text('{"title": "둘째 분석"}', encoding="utf-8")
+        result = list_history(history_dir=tmp_path)
+        assert len(result) == 2
+        filenames = [r["filename"] for r in result]
+        assert "a.json" in filenames
+        assert "b.json" in filenames
+
+    def test_limit(self, tmp_path):
+        for i in range(5):
+            (tmp_path / f"file{i}.json").write_text(f'{{"title": "분석 {i}"}}', encoding="utf-8")
+        result = list_history(limit=3, history_dir=tmp_path)
+        assert len(result) == 3
+
+    def test_summary_from_title(self, tmp_path):
+        (tmp_path / "test.json").write_text('{"title": "마케팅 분석"}', encoding="utf-8")
+        result = list_history(history_dir=tmp_path)
+        assert result[0]["summary"] == "마케팅 분석"
+
+    def test_summary_fallback(self, tmp_path):
+        (tmp_path / "test.json").write_text('{"content": "본문 내용"}', encoding="utf-8")
+        result = list_history(history_dir=tmp_path)
+        assert result[0]["summary"] == "본문 내용"
+
+    def test_invalid_json(self, tmp_path):
+        (tmp_path / "bad.json").write_text("not json", encoding="utf-8")
+        result = list_history(history_dir=tmp_path)
+        assert result[0]["summary"] == "(읽기 실패)"

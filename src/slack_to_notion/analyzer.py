@@ -130,3 +130,94 @@ def load_result(path: Path) -> dict:
 
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
+
+
+# ──────────────────────────────────────────────
+# 사용자 선호도 관리
+# ──────────────────────────────────────────────
+
+DEFAULT_PREFERENCES_PATH = Path(".claude/slack-to-notion/preferences.md")
+DEFAULT_HISTORY_DIR = Path(".claude/slack-to-notion/history")
+
+
+def save_preference(text: str, path: Path | None = None) -> Path:
+    """사용자 분석 선호도를 preferences.md에 추가한다.
+
+    append-only 방식으로 타임스탬프와 함께 축적한다.
+
+    Args:
+        text: 저장할 선호도 텍스트
+        path: 저장 경로 (기본: .claude/slack-to-notion/preferences.md)
+
+    Returns:
+        저장된 파일 경로
+    """
+    path = path or DEFAULT_PREFERENCES_PATH
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    timestamp = datetime.now().strftime("%Y-%m-%d")
+    entry = f"- [{timestamp}] {text}\n"
+
+    if not path.exists():
+        path.write_text("## 분석 선호도\n\n", encoding="utf-8")
+
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(entry)
+
+    return path
+
+
+def load_preferences(path: Path | None = None) -> str:
+    """저장된 분석 선호도를 반환한다.
+
+    Args:
+        path: 선호도 파일 경로 (기본: .claude/slack-to-notion/preferences.md)
+
+    Returns:
+        선호도 파일 내용. 파일이 없으면 빈 문자열.
+    """
+    path = path or DEFAULT_PREFERENCES_PATH
+    if not path.exists():
+        return ""
+    return path.read_text(encoding="utf-8")
+
+
+def list_history(limit: int = 10, history_dir: Path | None = None) -> list[dict]:
+    """분석 히스토리 목록을 반환한다.
+
+    history/ 디렉토리에서 최근 N건의 파일 정보를 반환한다.
+
+    Args:
+        limit: 반환할 최대 건수 (기본: 10)
+        history_dir: 히스토리 디렉토리 (기본: .claude/slack-to-notion/history)
+
+    Returns:
+        히스토리 목록. 각 항목은 {"filename", "path", "summary"} 형태.
+    """
+    history_dir = history_dir or DEFAULT_HISTORY_DIR
+    if not history_dir.exists():
+        return []
+
+    files = sorted(history_dir.glob("*.json"), key=lambda f: f.stat().st_mtime, reverse=True)
+    results = []
+    for f in files[:limit]:
+        summary = ""
+        try:
+            data = json.loads(f.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                summary = data.get("title", data.get("summary", ""))
+                if not summary:
+                    # 첫 번째 키의 값을 요약으로 사용
+                    for v in data.values():
+                        if isinstance(v, str) and v:
+                            summary = v[:100]
+                            break
+        except (json.JSONDecodeError, OSError):
+            summary = "(읽기 실패)"
+        results.append({
+            "filename": f.name,
+            "path": str(f),
+            "summary": summary,
+        })
+
+    return results
