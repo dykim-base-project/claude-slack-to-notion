@@ -69,7 +69,7 @@ claude --plugin-dir ./claude-slack-to-notion
 |------|------|------|
 | `SLACK_BOT_TOKEN` | Slack 채널 메시지 읽기 | `xoxb-`로 시작 |
 | `NOTION_API_KEY` | Notion 페이지 생성 | `secret_`로 시작 |
-| `NOTION_PARENT_PAGE_ID` | 분석 결과가 저장될 Notion 페이지 | 32자 영숫자 |
+| `NOTION_PARENT_PAGE_ID` | 분석 결과가 저장될 Notion 페이지 | 페이지 링크 또는 32자 ID |
 
 #### 1단계: Slack Bot Token 발급
 
@@ -78,7 +78,7 @@ Bot이 **초대된 채널**의 메시지만 읽을 수 있으므로, 사용할 �
 
 1. [Slack API](https://api.slack.com/apps) 페이지에 접속하여 로그인합니다.
 2. **"Create New App"** 버튼 클릭 → **"From scratch"** 선택
-3. App 이름(예: `slack-to-notion`)을 입력하고, 사용할 Workspace를 선택한 뒤 **"Create App"** 클릭
+3. App 이름(예: `slack-analyzer`)을 입력하고, 사용할 Workspace를 선택한 뒤 **"Create App"** 클릭
 4. 왼쪽 메뉴에서 **"OAuth & Permissions"** 클릭
 5. 아래로 스크롤하여 **"Bot Token Scopes"** 섹션에서 다음 4개 권한을 추가합니다:
 
@@ -89,15 +89,18 @@ Bot이 **초대된 채널**의 메시지만 읽을 수 있으므로, 사용할 �
 | `groups:history` | 비공개 채널의 메시지를 읽습니다 |
 | `users:read` | 메시지 작성자의 이름을 확인합니다 |
 
+> 비공개 채널 목록도 조회하려면 `groups:read` 스코프를 추가하세요. 없어도 공개 채널은 정상 동작합니다.
+
 6. 페이지 상단으로 스크롤하여 **"Install to Workspace"** 클릭 → **"허용"** 클릭
 7. **"Bot User OAuth Token"** 이 표시됩니다. 복사 버튼을 눌러 토큰을 복사합니다. (`xoxb-`로 시작하는 문자열)
+
+> 스코프를 나중에 추가한 경우, **"Reinstall to Workspace"** 를 클릭해야 반영됩니다. 재설치해도 토큰 값은 변경되지 않습니다.
 
 **Bot을 채널에 초대하기:**
 
 Bot은 초대된 채널만 접근할 수 있습니다. 메시지를 수집할 각 채널에서 Bot을 초대하세요.
 
-- **방법 1**: 채널 메시지 입력창에 `/invite @slack-to-notion` 입력 (App 이름으로 검색)
-- **방법 2**: 채널 상단의 채널 이름 클릭 → **"Integrations"** 탭 → **"Add apps"** → App 검색하여 추가
+- 채널 상단의 채널 이름 클릭 → **"Integrations"** 탭 → **"Add apps"** → App 검색하여 추가
 
 > 여러 채널에서 사용하려면 각 채널마다 Bot을 초대해야 합니다.
 
@@ -105,17 +108,16 @@ Bot은 초대된 채널만 접근할 수 있습니다. 메시지를 수집할 �
 
 Notion Integration은 분석 결과를 Notion 페이지로 작성하는 역할을 합니다.
 
-1. [Notion Integrations](https://www.notion.so/my-integrations) 페이지에 접속하여 로그인합니다.
-2. **"New integration"** 버튼 클릭
-3. 다음 항목을 입력합니다:
-   - **Name**: Integration 이름 (예: `slack-to-notion`)
-   - **Associated workspace**: 사용할 Notion 워크스페이스 선택
-4. **"Capabilities"** 섹션에서 다음이 체크되어 있는지 확인합니다:
-   - Read content
-   - Update content
-   - Insert content
-5. **"Submit"** 클릭
-6. **"Internal Integration Secret"** 이 표시됩니다. **"Show"** → **"Copy"** 버튼을 눌러 토큰을 복사합니다. (`secret_`로 시작하는 문자열)
+1. [Notion 내 API 통합](https://www.notion.so/my-integrations) 페이지에 접속하여 로그인합니다.
+2. **"새 API 통합 만들기"** 버튼 클릭
+3. **"통합 유형"** 에서 **"내부"** 를 선택합니다 (팀 워크스페이스 내부에서만 사용)
+4. 다음 항목을 입력합니다:
+   - **이름**: Integration 이름 (예: `slack-analyzer`)
+   - **연결된 워크스페이스**: 사용할 Notion 워크스페이스 선택
+5. **"저장"** 클릭
+6. **"내부 통합 시크릿"** 이 표시됩니다. **"표시"** → 복사 버튼을 눌러 토큰을 복사합니다. (`secret_`로 시작하는 문자열)
+
+> 시크릿 조회 시 400 에러가 발생하면 **시크릿 브라우징(incognito)** 모드에서 다시 시도하세요. 브라우저 캐시나 확장 프로그램이 간섭할 수 있습니다.
 
 **Integration을 Notion 페이지에 연결하기:**
 
@@ -123,25 +125,18 @@ Integration은 연결된 페이지만 접근할 수 있습니다. 분석 결과�
 
 1. Notion에서 분석 결과를 저장할 페이지를 엽니다 (새 페이지를 만들어도 됩니다)
 2. 페이지 우측 상단의 **`...`** (점 3개) 버튼 클릭
-3. **"Connect to"** 항목에서 위에서 만든 Integration 이름(예: `slack-to-notion`)을 검색하여 선택
-4. **"Confirm"** 클릭
+3. **"연결"** 항목에서 위에서 만든 Integration 이름(예: `slack-analyzer`)을 검색하여 선택
+4. **"확인"** 클릭
 
-#### 3단계: Notion Parent Page ID 확인
+#### 3단계: Notion 페이지 링크 복사
 
-분석 결과가 저장될 Notion 페이지의 ID를 확인합니다.
+분석 결과가 저장될 Notion 페이지의 링크를 복사합니다.
 
-1. 2단계에서 Integration을 연결한 Notion 페이지를 **브라우저**에서 엽니다
-2. 주소창의 URL을 확인합니다. 형식은 다음과 같습니다:
+1. 2단계에서 Integration을 연결한 Notion 페이지를 엽니다
+2. 페이지 우측 상단의 **`...`** (점 3개) 버튼 클릭 → **"링크 복사"** 클릭
+3. 복사된 링크를 4단계에서 `.env` 파일에 그대로 붙여넣습니다
 
-```
-https://www.notion.so/워크스페이스/페이지제목-abc1234567890def1234567890abcdef
-                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-                                              이 32자가 Page ID 입니다
-```
-
-3. URL 마지막의 **32자리 영숫자 문자열**을 복사합니다 (하이픈 `-` 뒤의 부분)
-
-> URL에 `?v=...` 같은 추가 파라미터가 붙어 있다면, `?` 앞까지만 사용합니다.
+> Page ID가 자동으로 추출되므로 URL에서 ID를 직접 찾을 필요가 없습니다.
 
 #### 4단계: 환경변수 설정
 
@@ -170,10 +165,12 @@ code .env
 **`.env` 파일 내용을 다음과 같이 수정합니다:**
 
 ```
-SLACK_BOT_TOKEN=xoxb-1234-5678-abcdefgh     ← 1단계에서 복사한 값
-NOTION_API_KEY=secret_abc123def456...         ← 2단계에서 복사한 값
-NOTION_PARENT_PAGE_ID=abc1234567890def...     ← 3단계에서 복사한 값
+SLACK_BOT_TOKEN=xoxb-1234-5678-abcdefgh                                          ← 1단계에서 복사한 값
+NOTION_API_KEY=secret_abc123def456...                                              ← 2단계에서 복사한 값
+NOTION_PARENT_PAGE_ID=https://www.notion.so/abc123def456...?source=copy_link       ← 3단계에서 복사한 링크
 ```
+
+> `NOTION_PARENT_PAGE_ID`에는 Notion 페이지 URL을 그대로 붙여넣으면 됩니다. Page ID가 자동으로 추출됩니다.
 
 > `.env` 파일에는 토큰이 포함되어 있으므로 Git에 업로드되지 않도록 `.gitignore`에 이미 등록되어 있습니다.
 

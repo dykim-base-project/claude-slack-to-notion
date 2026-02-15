@@ -3,10 +3,42 @@
 notion-client를 사용하여 분석 결과를 Notion 페이지로 생성한다.
 """
 
-from datetime import date
+import re
+from urllib.parse import urlparse
 
 from notion_client import Client
 from notion_client.errors import APIResponseError
+
+
+def extract_page_id(value: str) -> str:
+    """Notion 페이지 URL 또는 ID에서 Page ID를 추출한다.
+
+    지원 형식:
+        - 전체 URL: https://www.notion.so/30829a38f6df80769e03d841eaad4f15?source=copy_link
+        - 제목 포함 URL: https://www.notion.so/workspace/페이지제목-abc123def456...
+        - 32자 ID: 30829a38f6df80769e03d841eaad4f15
+        - UUID 형식: 30829a38-f6df-8076-9e03-d841eaad4f15
+    """
+    value = value.strip()
+
+    # URL인 경우 경로에서 추출
+    if value.startswith("http"):
+        parsed = urlparse(value)
+        path = parsed.path.strip("/")
+        # 마지막 경로 세그먼트 사용
+        segment = path.split("/")[-1] if "/" in path else path
+    else:
+        segment = value
+
+    # 하이픈 제거 (UUID 형식 대응)
+    cleaned = segment.replace("-", "")
+
+    # 32자 hex 문자열 추출 (끝에서 32자)
+    match = re.search(r"([0-9a-f]{32})$", cleaned)
+    if match:
+        return match.group(1)
+
+    return value
 
 
 class NotionClientError(Exception):
@@ -47,71 +79,33 @@ class NotionClient:
         else:
             return f"Notion API 오류가 발생했습니다: {code}. 자세한 내용은 README.md를 참고하세요."
 
-    def get_or_create_database(self, parent_page_id: str) -> str:
-        """parent_page_id 하위에서 'Slack 분석' DB를 찾거나 생성."""
+    def check_duplicate(self, parent_page_id: str, title: str) -> bool:
+        """상위 페이지 하위에서 동일 제목의 페이지가 있는지 확인."""
         try:
-            # 하위 블록 검색
             blocks = self.client.blocks.children.list(block_id=parent_page_id)
             for block in blocks.get("results", []):
-                if block["type"] == "child_database":
-                    title_list = block.get("child_database", {}).get("title", [])
-                    if title_list and title_list[0].get("plain_text") == "Slack 분석":
-                        return block["id"]
-
-            # DB 생성
-            response = self.client.databases.create(
-                parent={"type": "page_id", "page_id": parent_page_id},
-                title=[{"type": "text", "text": {"content": "Slack 분석"}}],
-                properties={
-                    "제목": {"title": {}},
-                    "채널명": {"rich_text": {}},
-                    "분석기간": {"rich_text": {}},
-                    "생성일": {"date": {}},
-                },
-            )
-            return response["id"]
-        except APIResponseError as e:
-            raise NotionClientError(self._format_error_message(e)) from e
-
-    def check_duplicate(self, database_id: str, channel_name: str, period: str) -> bool:
-        """DB에서 동일 채널명/분석기간 페이지가 있는지 확인."""
-        try:
-            response = self.client.databases.query(
-                database_id=database_id,
-                filter={
-                    "and": [
-                        {"property": "채널명", "rich_text": {"equals": channel_name}},
-                        {"property": "분석기간", "rich_text": {"equals": period}},
-                    ]
-                },
-            )
-            return len(response.get("results", [])) > 0
+                if block["type"] == "child_page":
+                    page_title = block.get("child_page", {}).get("title", "")
+                    if page_title == title:
+                        return True
+            return False
         except APIResponseError as e:
             raise NotionClientError(self._format_error_message(e)) from e
 
     def create_analysis_page(
         self,
-        database_id: str,
+        parent_page_id: str,
         title: str,
-        channel_name: str,
-        period: str,
         blocks: list[dict],
     ) -> str:
-        """DB에 분석 페이지 생성."""
+        """상위 페이지 하위에 분석 결과 페이지를 생성."""
         try:
             response = self.client.pages.create(
-                parent={"database_id": database_id},
+                parent={"page_id": parent_page_id},
                 properties={
-                    "제목": {"title": [{"type": "text", "text": {"content": title}}]},
-                    "채널명": {
-                        "rich_text": [
-                            {"type": "text", "text": {"content": channel_name}}
-                        ]
+                    "title": {
+                        "title": [{"type": "text", "text": {"content": title}}]
                     },
-                    "분석기간": {
-                        "rich_text": [{"type": "text", "text": {"content": period}}]
-                    },
-                    "생성일": {"date": {"start": date.today().isoformat()}},
                 },
                 children=blocks,
             )

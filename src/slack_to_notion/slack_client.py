@@ -41,10 +41,20 @@ class SlackClient:
         try:
             channels = []
             cursor = None
+            types = "public_channel,private_channel"
+
+            try:
+                # 비공개 채널 포함 조회 시도
+                self.client.conversations_list(types=types, limit=1)
+            except SlackApiError as e:
+                if e.response.get("error") == "missing_scope":
+                    types = "public_channel"
+                else:
+                    raise
 
             while True:
                 response = self.client.conversations_list(
-                    types="public_channel,private_channel",
+                    types=types,
                     cursor=cursor,
                     limit=200,
                 )
@@ -152,8 +162,8 @@ class SlackClient:
         if error_code in ("invalid_auth", "not_authed"):
             return "Slack 토큰이 올바르지 않습니다. .env 파일의 SLACK_BOT_TOKEN을 확인하세요."
 
-        if error_code == "channel_not_found":
-            return "채널을 찾을 수 없습니다. Bot이 해당 채널에 초대되어 있는지 확인하세요."
+        if error_code in ("channel_not_found", "not_in_channel"):
+            return "Bot이 해당 채널에 초대되어 있지 않습니다. 채널 설정 → Integrations → Add apps에서 Bot을 추가하세요."
 
         if error_code == "missing_scope":
             return "Bot에 필요한 권한이 없습니다. Slack App 설정에서 channels:history, channels:read 권한을 추가하세요."

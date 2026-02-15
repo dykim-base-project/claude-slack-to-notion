@@ -67,6 +67,52 @@ def format_messages_for_analysis(messages: list[dict], channel_name: str) -> str
     return "\n".join(context_lines + message_lines)
 
 
+def format_threads_for_analysis(
+    threads: list[dict],
+    channel_name: str,
+) -> str:
+    """복수 스레드 메시지를 AI 분석용 텍스트로 변환.
+
+    Args:
+        threads: 스레드 목록. 각 항목은 {"thread_ts": str, "messages": list[dict]}
+        channel_name: 채널 이름
+
+    Returns:
+        AI 분석용 포맷 텍스트
+    """
+    total_messages = sum(len(t["messages"]) for t in threads)
+    context_lines = [
+        f"Channel: {channel_name}",
+        f"Thread count: {len(threads)}",
+        f"Total messages: {total_messages}",
+        "",
+    ]
+
+    for i, thread in enumerate(threads, 1):
+        messages = thread["messages"]
+        # 첫 메시지를 스레드 주제로 사용
+        topic = messages[0].get("text", "(내용 없음)") if messages else "(빈 스레드)"
+        context_lines.append(f"--- Thread {i}: {topic} ---")
+        context_lines.append("")
+
+        for msg in messages:
+            ts = msg.get("ts", "")
+            user = msg.get("user", "Unknown")
+            text = msg.get("text", "")
+
+            try:
+                dt = datetime.fromtimestamp(float(ts))
+                timestamp_str = dt.strftime("%Y-%m-%d %H:%M:%S")
+            except (ValueError, TypeError):
+                timestamp_str = ts
+
+            context_lines.append(f"[{timestamp_str}] {user}: {text}")
+
+        context_lines.append("")
+
+    return "\n".join(context_lines)
+
+
 def save_result(data: dict, path: Path) -> Path:
     """분석 결과를 JSON 파일로 로컬 저장 (백업/캐시)."""
     path.parent.mkdir(parents=True, exist_ok=True)

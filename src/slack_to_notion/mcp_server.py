@@ -14,10 +14,11 @@ from mcp.server.fastmcp import FastMCP
 from .analyzer import (
     ANALYSIS_GUIDE_EXAMPLES,
     format_messages_for_analysis,
+    format_threads_for_analysis,
     get_analysis_guide,
     save_result,
 )
-from .notion_client import NotionClient, NotionClientError
+from .notion_client import NotionClient, NotionClientError, extract_page_id
 from .slack_client import SlackClient, SlackClientError
 
 # stdout은 MCP 프로토콜용이므로 로깅은 stderr로
@@ -140,6 +141,49 @@ def fetch_thread(channel_id: str, thread_ts: str) -> str:
 
 
 @mcp.tool()
+def fetch_threads(
+    channel_id: str,
+    thread_ts_list: list[str],
+    channel_name: str = "",
+) -> str:
+    """여러 Slack 스레드의 메시지를 한 번에 수집하고 AI 분석용으로 포맷팅한다.
+
+    복수의 스레드를 입력받아 각 스레드의 댓글을 모두 수집한 뒤,
+    AI가 분석할 수 있는 텍스트로 변환하여 반환한다.
+
+    Args:
+        channel_id: 채널 ID (예: C0123456789)
+        thread_ts_list: 스레드 타임스탬프 리스트 (예: ["1234567890.123456", "1234567891.654321"])
+        channel_name: 채널 이름 (포맷팅 헤더에 표시, 미지정 시 채널 ID 사용)
+
+    Returns:
+        AI 분석용으로 포맷팅된 복수 스레드 메시지 텍스트
+    """
+    try:
+        client = _get_slack_client()
+        display_name = channel_name or channel_id
+
+        threads = []
+        for thread_ts in thread_ts_list:
+            try:
+                messages = client.fetch_thread_replies(channel_id, thread_ts)
+                threads.append({"thread_ts": thread_ts, "messages": messages})
+            except SlackClientError as e:
+                threads.append({
+                    "thread_ts": thread_ts,
+                    "messages": [{"text": f"[수집 실패] {e.message}", "user": "system", "ts": thread_ts}],
+                })
+
+        return format_threads_for_analysis(threads, display_name)
+
+    except SlackClientError as e:
+        return f"[에러] {e.message}"
+    except Exception as e:
+        logger.exception("예상치 못한 에러 발생")
+        return f"[에러] 스레드 수집 실패: {e!s}"
+
+
+@mcp.tool()
 def fetch_channel_info(channel_id: str) -> str:
     """Slack 채널의 상세 정보를 조회한다.
 
@@ -218,45 +262,36 @@ def format_messages(
 def create_notion_page(
     title: str,
     content: str,
-    channel_name: str,
-    period: str,
 ) -> str:
     """분석 결과를 Notion 페이지로 생성한다.
 
     자유 형식 텍스트(마크다운)를 Notion 블록으로 변환하여 페이지를 생성한다.
-    중복 체크를 수행하여 동일 채널/기간의 페이지가 이미 있으면 안내한다.
+    동일 제목의 페이지가 이미 있으면 안내한다.
 
     Args:
         title: 페이지 제목 (예: "[general] 분석 결과 - 2024-01-15")
         content: 분석 결과 텍스트 (마크다운 형식 지원: #, ##, ###, -, *)
-        channel_name: 채널 이름
-        period: 분석 기간 (예: "2024-01-01 ~ 2024-01-15")
 
     Returns:
         생성된 Notion 페이지 URL 또는 에러 메시지
     """
     try:
         client = _get_notion_client()
-        parent_page_id = os.environ.get("NOTION_PARENT_PAGE_ID")
-        if not parent_page_id:
+        raw_page_id = os.environ.get("NOTION_PARENT_PAGE_ID")
+        if not raw_page_id:
             return "[에러] NOTION_PARENT_PAGE_ID 환경변수가 설정되지 않았습니다."
-
-        # DB 조회/생성
-        database_id = client.get_or_create_database(parent_page_id)
+        parent_page_id = extract_page_id(raw_page_id)
 
         # 중복 체크
-        if client.check_duplicate(database_id, channel_name, period):
+        if client.check_duplicate(parent_page_id, title):
             return (
-                f"[안내] 이미 동일한 분석 결과가 존재합니다 "
-                f"(채널: {channel_name}, 기간: {period}). "
-                f"새로 생성하려면 기간을 변경하세요."
+                f"[안내] 동일한 제목의 페이지가 이미 존재합니다: {title}. "
+                f"제목을 변경하거나 기존 페이지를 확인하세요."
             )
 
         # 블록 변환 + 페이지 생성
         blocks = client.build_page_blocks(content)
-        url = client.create_analysis_page(
-            database_id, title, channel_name, period, blocks
-        )
+        url = client.create_analysis_page(parent_page_id, title, blocks)
         return f"Notion 페이지가 생성되었습니다: {url}"
 
     except NotionClientError as e:
