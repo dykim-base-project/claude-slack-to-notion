@@ -119,4 +119,4 @@ main ────────────────●─────
 
 - claude-devex 플러그인 기반 이슈 사이클 워크플로우 사용
 - 플러그인 버전은 `.claude/.devex-version`으로 관리
-- 업데이트: `curl -sL https://raw.githubusercontent.com/dykim-base-project/claude-devex/main/setup.sh | bash -s -- --update`
+- 업데이트: `curl -sL https://raw.githubusercontent.com/idean3885/claude-devex/main/setup.sh | bash -s -- --update`
