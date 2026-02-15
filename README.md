@@ -122,6 +122,8 @@ Slack #general 채널 메시지 조회해줘
 | `fetch_thread` | 특정 스레드의 전체 메시지 조회 |
 | `fetch_channel_info` | 채널 상세 정보 조회 |
 
+> 메시지 분석 및 Notion 페이지 생성은 Claude가 위 도구로 수집한 데이터를 기반으로 자동 수행합니다.
+
 ### 제약사항
 
 - **플랫폼**: macOS/Linux만 지원 (Windows 지원 예정)
@@ -189,6 +191,7 @@ claude-slack-to-notion/
 │       ├── notion_client.py         # Notion API 연동
 │       └── config.py                # 설정 관리
 ├── pyproject.toml                   # Python 패키지 설정
+├── CLAUDE.md                        # AI 협업 가이드
 ├── README.md
 └── .gitignore
 ```
@@ -198,7 +201,7 @@ claude-slack-to-notion/
 | 구분 | 기술 |
 |------|------|
 | 언어 | Python 3.10+ |
-| 패키지 관리 | setuptools, pip |
+| 빌드 시스템 | setuptools, wheel |
 | Slack 연동 | slack_sdk >= 3.27.0 |
 | Notion 연동 | notion-client >= 2.2.0 |
 | MCP 서버 | mcp[cli] >= 1.0.0 |
