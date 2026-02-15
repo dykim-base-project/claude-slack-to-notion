@@ -16,6 +16,9 @@ from .analyzer import (
     format_messages_for_analysis,
     format_threads_for_analysis,
     get_analysis_guide,
+    list_history,
+    load_preferences,
+    save_preference,
     save_result,
 )
 from .notion_client import NotionClient, NotionClientError, extract_page_id
@@ -332,6 +335,80 @@ def save_analysis_result(data_json: str, filename: str = "") -> str:
     except Exception as e:
         logger.exception("예상치 못한 에러 발생")
         return f"[에러] 저장 실패: {e!s}"
+
+
+# ──────────────────────────────────────────────
+# 커스터마이징 도구
+# ──────────────────────────────────────────────
+
+
+@mcp.tool()
+def save_preference_tool(text: str) -> str:
+    """사용자의 분석 선호도를 저장한다.
+
+    사용자가 "기억해줘", "앞으로 ~해줘", "다음에는 ~방식으로" 등
+    분석 방향에 대한 선호를 표현할 때 호출한다.
+
+    Args:
+        text: 저장할 선호도 (예: "회의록은 결정사항 위주로 정리해줘")
+
+    Returns:
+        저장 결과 메시지
+    """
+    try:
+        path = save_preference(text)
+        return f"선호도가 저장되었습니다: {text}"
+    except Exception as e:
+        logger.exception("선호도 저장 실패")
+        return f"[에러] 선호도 저장 실패: {e!s}"
+
+
+@mcp.tool()
+def get_preferences() -> str:
+    """저장된 분석 선호도를 조회한다.
+
+    분석을 시작하기 전에 호출하여 사용자의 선호도를 확인한다.
+    저장된 선호도가 있으면 분석 시 해당 방향을 반영한다.
+
+    Returns:
+        저장된 선호도 텍스트. 없으면 안내 메시지.
+    """
+    try:
+        content = load_preferences()
+        if not content:
+            return "저장된 분석 선호도가 없습니다. 사용자에게 분석 방향을 질문하세요."
+        return content
+    except Exception as e:
+        logger.exception("선호도 조회 실패")
+        return f"[에러] 선호도 조회 실패: {e!s}"
+
+
+@mcp.tool()
+def list_analysis_history(limit: int = 10) -> str:
+    """과거 분석 결과 히스토리를 조회한다.
+
+    사용자가 "지난번처럼", "이전에 정리한 거" 등을 언급할 때 호출한다.
+    save_analysis_result로 저장된 분석 결과 목록을 반환한다.
+
+    Args:
+        limit: 조회할 최대 건수 (기본값: 10)
+
+    Returns:
+        히스토리 목록 (파일명, 요약 포함)
+    """
+    try:
+        history = list_history(limit)
+        if not history:
+            return "저장된 분석 히스토리가 없습니다."
+
+        lines = [f"최근 분석 히스토리 ({len(history)}건):"]
+        for i, item in enumerate(history, 1):
+            summary = item["summary"] or "(요약 없음)"
+            lines.append(f"  {i}. {item['filename']} - {summary}")
+        return "\n".join(lines)
+    except Exception as e:
+        logger.exception("히스토리 조회 실패")
+        return f"[에러] 히스토리 조회 실패: {e!s}"
 
 
 if __name__ == "__main__":

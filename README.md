@@ -224,6 +224,14 @@ Slack #general 채널 메시지 조회해줘
 | `create_notion_page` | 분석 결과를 Notion 페이지로 생성 |
 | `save_analysis_result` | 분석 결과를 로컬 JSON 파일로 백업 |
 
+**커스터마이징**
+
+| 도구 | 설명 |
+|------|------|
+| `save_preference_tool` | 사용자의 분석 선호도 저장 ("기억해줘", "앞으로 ~해줘") |
+| `get_preferences` | 저장된 분석 선호도 조회 (분석 전 자동 참조) |
+| `list_analysis_history` | 과거 분석 결과 히스토리 조회 ("지난번처럼 해줘") |
+
 ### 제약사항
 
 - **플랫폼**: macOS/Linux만 지원 (Windows 지원 예정)
