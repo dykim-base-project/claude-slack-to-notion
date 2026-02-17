@@ -19,13 +19,15 @@ class SlackClientError(Exception):
 class SlackClient:
     """Slack API 클라이언트."""
 
-    def __init__(self, token: str):
+    def __init__(self, token: str, token_type: str = "bot"):
         """클라이언트 초기화.
 
         Args:
-            token: Slack Bot 토큰
+            token: Slack 토큰 (봇 또는 사용자)
+            token_type: 토큰 타입 ("bot" 또는 "user", 기본값 "bot")
         """
         self.client = WebClient(token=token)
+        self.token_type = token_type
         retry_handler = RateLimitErrorRetryHandler(max_retry_count=3)
         self.client.retry_handlers.append(retry_handler)
 
@@ -158,14 +160,21 @@ class SlackClient:
             한글 안내 메시지
         """
         error_code = error.response.get("error", "")
+        is_user_token = self.token_type == "user"
 
         if error_code in ("invalid_auth", "not_authed"):
+            if is_user_token:
+                return "Slack 토큰이 올바르지 않습니다. .env 파일의 SLACK_USER_TOKEN을 확인하세요."
             return "Slack 토큰이 올바르지 않습니다. .env 파일의 SLACK_BOT_TOKEN을 확인하세요."
 
         if error_code in ("channel_not_found", "not_in_channel"):
+            if is_user_token:
+                return "해당 채널에 접근 권한이 없습니다. Slack에서 채널에 참여해 있는지 확인하세요."
             return "Bot이 해당 채널에 초대되어 있지 않습니다. 채널 설정 → Integrations → Add apps에서 Bot을 추가하세요."
 
         if error_code == "missing_scope":
+            if is_user_token:
+                return "사용자 토큰에 필요한 권한이 없습니다. Slack App 설정에서 User Token Scopes를 추가하세요."
             return "Bot에 필요한 권한이 없습니다. Slack App 설정에서 channels:history, channels:read 권한을 추가하세요."
 
         return f"Slack API 오류가 발생했습니다: {error_code}. 자세한 내용은 README.md를 참고하세요."

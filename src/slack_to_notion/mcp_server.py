@@ -41,17 +41,23 @@ _notion_client: NotionClient | None = None
 
 
 def _get_slack_client() -> SlackClient:
-    """SlackClient 인스턴스를 반환한다. 없으면 초기화."""
+    """SlackClient 인스턴스를 반환한다. 없으면 초기화.
+
+    봇 토큰(SLACK_BOT_TOKEN)을 우선 사용하고, 없으면 사용자 토큰(SLACK_USER_TOKEN)을 사용한다.
+    """
     global _slack_client
     if _slack_client is None:
-        token = os.environ.get("SLACK_BOT_TOKEN")
+        # 봇 토큰 우선, 없으면 사용자 토큰
+        token = os.environ.get("SLACK_BOT_TOKEN") or os.environ.get("SLACK_USER_TOKEN")
         if not token:
             raise RuntimeError(
-                "SLACK_BOT_TOKEN 환경변수가 설정되지 않았습니다. "
+                "SLACK_BOT_TOKEN 또는 SLACK_USER_TOKEN 환경변수가 설정되지 않았습니다. "
                 ".mcp.json 파일의 env 섹션을 확인하세요."
             )
-        _slack_client = SlackClient(token)
-        logger.info("SlackClient 초기화 완료")
+        # 접두사로 토큰 타입 판별
+        token_type = "user" if token.startswith("xoxp-") else "bot"
+        _slack_client = SlackClient(token, token_type)
+        logger.info("SlackClient 초기화 완료 (token_type=%s)", token_type)
     return _slack_client
 
 

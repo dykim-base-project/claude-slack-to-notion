@@ -17,7 +17,6 @@ def load_config() -> dict:
         SystemExit: 필수 환경변수가 누락된 경우 (비개발자 안내 메시지 포함)
     """
     required_vars = {
-        "SLACK_BOT_TOKEN": "Slack Bot 토큰",
         "NOTION_API_KEY": "Notion API 키",
         "NOTION_PARENT_PAGE_ID": "Notion 상위 페이지 ID",
     }
@@ -32,13 +31,25 @@ def load_config() -> dict:
         else:
             config[var] = value
 
+    # Slack 토큰 검증: 봇 토큰 또는 사용자 토큰 중 하나 필수
+    slack_bot_token = os.environ.get("SLACK_BOT_TOKEN")
+    slack_user_token = os.environ.get("SLACK_USER_TOKEN")
+    if not slack_bot_token and not slack_user_token:
+        missing.append("  - SLACK_BOT_TOKEN 또는 SLACK_USER_TOKEN: Slack 토큰")
+
+    if slack_bot_token:
+        config["SLACK_BOT_TOKEN"] = slack_bot_token
+    elif slack_user_token:
+        config["SLACK_USER_TOKEN"] = slack_user_token
+
     if missing:
         print("\n[설정 오류] 필수 환경변수가 설정되지 않았습니다.\n")
         print("누락된 항목:")
         for item in missing:
             print(item)
         print("\n설정 방법:")
-        print("  export SLACK_BOT_TOKEN=\"xoxb-...\"")
+        print("  export SLACK_BOT_TOKEN=\"xoxb-...\"  # 봇 토큰 (권장)")
+        print("  export SLACK_USER_TOKEN=\"xoxp-...\"  # 사용자 토큰 (대안)")
         print("  export NOTION_API_KEY=\"secret_...\"")
         print("  export NOTION_PARENT_PAGE_ID=\"...\"")
         print("\n자세한 발급 방법은 README.md를 참고하세요.\n")
