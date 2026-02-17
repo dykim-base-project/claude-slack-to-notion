@@ -45,7 +45,7 @@ graph LR
 
 - [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code)
 - Python 3.10 이상 (macOS: `brew install python3`)
-- Slack Bot Token
+- Slack 토큰 (Bot Token 또는 User Token 중 택 1)
 - Notion API Key
 - Notion Parent Page ID
 
@@ -67,14 +67,26 @@ claude --plugin-dir ./claude-slack-to-notion
 
 | 토큰 | 용도 | 형식 |
 |------|------|------|
-| `SLACK_BOT_TOKEN` | Slack 채널 메시지 읽기 | `xoxb-`로 시작 |
+| `SLACK_BOT_TOKEN` | Slack 채널 메시지 읽기 (권장) | `xoxb-`로 시작 |
+| `SLACK_USER_TOKEN` | Slack 채널 메시지 읽기 (대안) | `xoxp-`로 시작 |
 | `NOTION_API_KEY` | Notion 페이지 생성 | `secret_`로 시작 |
 | `NOTION_PARENT_PAGE_ID` | 분석 결과가 저장될 Notion 페이지 | 페이지 링크 또는 32자 ID |
 
-#### 1단계: Slack Bot Token 발급
+> `SLACK_BOT_TOKEN`과 `SLACK_USER_TOKEN` 중 **하나만 설정**하면 됩니다. 둘 다 설정하면 Bot 토큰이 사용됩니다.
 
-Slack Bot은 채널의 메시지를 읽어오는 역할을 합니다.
-Bot이 **초대된 채널**의 메시지만 읽을 수 있으므로, 사용할 채널에 Bot을 초대해야 합니다.
+#### 1단계: Slack 토큰 발급
+
+Slack 채널의 메시지를 읽어오려면 Slack App을 만들고 토큰을 발급받아야 합니다.
+**Bot 토큰**과 **사용자 토큰**, 두 가지 방식이 있습니다.
+
+| | Bot 토큰 (권장) | 사용자 토큰 (대안) |
+|---|---|---|
+| 채널 접근 | 채널에 앱을 추가해야 함 | 본인이 참여한 채널에 바로 접근 |
+| 설정 공유 | 한 명이 설정 후 `.env` 파일 공유 가능 | 각자 본인 토큰을 발급 |
+| 지속성 | 채널이 있는 한 계속 동작 | 토큰 발급자가 워크스페이스를 떠나면 중단 |
+| 적합한 경우 | 팀에서 함께 사용, 안정적 운영 | 혼자 빠르게 시작, 앱 추가가 어려운 채널 |
+
+##### 방식 A: Bot 토큰 발급 (권장)
 
 1. [Slack API](https://api.slack.com/apps) 페이지에 접속하여 로그인합니다.
 2. **"Create New App"** 버튼 클릭 → **"From scratch"** 선택
@@ -103,6 +115,25 @@ Bot은 초대된 채널만 접근할 수 있습니다. 메시지를 수집할 �
 - 채널 상단의 채널 이름 클릭 → **"Integrations"** 탭 → **"Add apps"** → App 검색하여 추가
 
 > 여러 채널에서 사용하려면 각 채널마다 Bot을 초대해야 합니다.
+
+##### 방식 B: 사용자 토큰 발급 (대안)
+
+채널에 앱을 추가하지 않고, 본인 계정의 권한으로 메시지를 읽는 방식입니다.
+방식 A의 1~4단계까지 동일하게 Slack App을 생성한 뒤, 아래를 따르세요.
+
+1. **"OAuth & Permissions"** 에서 **"User Token Scopes"** 섹션에 다음 권한을 추가합니다:
+
+| 스코프 | 설명 |
+|--------|------|
+| `channels:history` | 공개 채널의 메시지를 읽습니다 |
+| `channels:read` | 채널 목록을 조회합니다 |
+| `groups:history` | 비공개 채널의 메시지를 읽습니다 |
+| `users:read` | 메시지 작성자의 이름을 확인합니다 |
+
+2. **"Install to Workspace"** 클릭 → **"허용"** 클릭
+3. **"User OAuth Token"** 을 복사합니다. (`xoxp-`로 시작하는 문자열)
+
+> 사용자 토큰은 발급한 본인이 참여한 채널에만 접근할 수 있습니다. 본인이 워크스페이스를 떠나면 토큰이 무효화됩니다.
 
 #### 2단계: Notion API Key 발급
 
@@ -165,7 +196,12 @@ code .env
 **`.env` 파일 내용을 다음과 같이 수정합니다:**
 
 ```
+# 방식 A를 선택한 경우 (Bot 토큰)
 SLACK_BOT_TOKEN=xoxb-1234-5678-abcdefgh                                          ← 1단계에서 복사한 값
+
+# 방식 B를 선택한 경우 (사용자 토큰) — 둘 중 하나만 설정
+# SLACK_USER_TOKEN=xoxp-1234-5678-abcdefgh                                       ← 1단계에서 복사한 값
+
 NOTION_API_KEY=secret_abc123def456...                                              ← 2단계에서 복사한 값
 NOTION_PARENT_PAGE_ID=https://www.notion.so/abc123def456...?source=copy_link       ← 3단계에서 복사한 링크
 ```
@@ -238,16 +274,17 @@ Slack #general 채널 메시지 조회해줘
 - **API 토큰 관리**: Slack API 토큰, Notion API 키는 환경변수로 관리 (Git 추적 금지)
 - **개인 메시지(DM) 제외**: 보안상 개인 DM 수집 지원하지 않음
 - **API Rate Limit**: Slack/Notion API Rate Limit 고려 필요 (과도한 요청 시 제한 발생 가능)
-- **Bot 권한**: Slack Bot이 조회할 채널에 미리 초대되어 있어야 함
+- **채널 접근**: Bot 토큰 사용 시 채널에 앱 초대 필요, 사용자 토큰 사용 시 본인이 참여한 채널만 접근 가능
 
 ### 문제 해결
 
 | 증상 | 원인 | 해결 방법 |
 |------|------|-----------|
 | `[오류] python3이 설치되지 않았습니다.` | Python 3 미설치 | macOS: `brew install python3` |
-| `SLACK_BOT_TOKEN 환경변수가 설정되지 않았습니다` | `.env` 파일 미생성 또는 토큰 미입력 | [4단계: 환경변수 설정](#4단계-환경변수-설정) 참고 |
-| `not_in_channel` 에러 | Bot이 해당 채널에 초대되지 않음 | 채널 설정 → Integrations → Add apps에서 Bot 추가 ([1단계](#1단계-slack-bot-token-발급)의 "Bot을 채널에 초대하기" 참고) |
-| `invalid_auth` 에러 | 토큰이 잘못되었거나 만료됨 | [Slack API](https://api.slack.com/apps)에서 Bot Token 재확인 후 `.env` 파일 수정 |
+| `SLACK_BOT_TOKEN 또는 SLACK_USER_TOKEN 환경변수가 설정되지 않았습니다` | `.env` 파일 미생성 또는 토큰 미입력 | [4단계: 환경변수 설정](#4단계-환경변수-설정) 참고 |
+| `not_in_channel` 에러 (Bot 토큰) | Bot이 해당 채널에 초대되지 않음 | 채널 설정 → Integrations → Add apps에서 Bot 추가 ([방식 A](#방식-a-bot-토큰-발급-권장) 참고) |
+| `not_in_channel` 에러 (사용자 토큰) | 해당 채널에 참여하지 않음 | Slack에서 채널에 참여한 뒤 다시 시도 |
+| `invalid_auth` 에러 | 토큰이 잘못되었거나 만료됨 | [Slack API](https://api.slack.com/apps)에서 토큰 재확인 후 `.env` 파일 수정 |
 | `Notion API 키가 올바르지 않습니다` | Notion API Key가 잘못됨 | [Notion Integrations](https://www.notion.so/my-integrations)에서 Secret 재확인 |
 | `Notion 페이지를 찾을 수 없습니다` | Integration이 페이지에 연결되지 않음 | [2단계](#2단계-notion-api-key-발급)의 "Integration을 Notion 페이지에 연결하기" 참고 |
 | `패키지 설치에 실패했습니다` | 네트워크 문제 또는 Python 버전 | 네트워크 확인 + Python 3.10 이상인지 확인 |
