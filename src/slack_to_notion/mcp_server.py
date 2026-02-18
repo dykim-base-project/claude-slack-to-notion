@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import sys
+from datetime import datetime
 from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
@@ -92,7 +93,7 @@ def list_channels() -> str:
     try:
         client = _get_slack_client()
         channels = client.list_channels()
-        return json.dumps(channels, ensure_ascii=False, indent=2)
+        return json.dumps(channels, ensure_ascii=False)
     except SlackClientError as e:
         return f"[에러] {e.message}"
     except Exception as e:
@@ -121,7 +122,11 @@ def fetch_messages(
         limit = max(1, min(limit, 1000))
         messages = client.fetch_channel_messages(channel_id, limit, oldest)
         client.resolve_user_names(messages)
-        return json.dumps(messages, ensure_ascii=False, indent=2)
+        filtered = [
+            {k: m[k] for k in ("ts", "user", "text", "reply_count", "thread_ts") if k in m}
+            for m in messages
+        ]
+        return json.dumps(filtered, ensure_ascii=False)
     except SlackClientError as e:
         return f"[에러] {e.message}"
     except Exception as e:
@@ -144,7 +149,11 @@ def fetch_thread(channel_id: str, thread_ts: str) -> str:
         client = _get_slack_client()
         messages = client.fetch_thread_replies(channel_id, thread_ts)
         client.resolve_user_names(messages)
-        return json.dumps(messages, ensure_ascii=False, indent=2)
+        filtered = [
+            {k: m[k] for k in ("ts", "user", "text", "reply_count", "thread_ts") if k in m}
+            for m in messages
+        ]
+        return json.dumps(filtered, ensure_ascii=False)
     except SlackClientError as e:
         return f"[에러] {e.message}"
     except Exception as e:
@@ -209,7 +218,8 @@ def fetch_channel_info(channel_id: str) -> str:
     try:
         client = _get_slack_client()
         info = client.fetch_channel_info(channel_id)
-        return json.dumps(info, ensure_ascii=False, indent=2)
+        filtered = {k: info[k] for k in ("id", "name", "topic", "purpose", "num_members", "is_private") if k in info}
+        return json.dumps(filtered, ensure_ascii=False)
     except SlackClientError as e:
         return f"[에러] {e.message}"
     except Exception as e:
@@ -329,8 +339,6 @@ def save_analysis_result(data_json: str, filename: str = "") -> str:
         저장된 파일 경로 또는 에러 메시지
     """
     try:
-        from datetime import datetime
-
         data = json.loads(data_json)
 
         if not filename:
