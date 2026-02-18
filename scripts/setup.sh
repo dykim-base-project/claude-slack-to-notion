@@ -101,7 +101,7 @@ if [[ "$IS_UPDATE" == "true" ]]; then
       token=$(python3 -c "
 import json, sys
 try:
-    with open('$mcp_path') as f:
+    with open(sys.argv[1]) as f:
         data = json.load(f)
     servers = data.get('mcpServers', data.get('mcp', {}).get('servers', {}))
     server = servers.get('slack-to-notion', {})
@@ -109,7 +109,7 @@ try:
     print(env.get('SLACK_BOT_TOKEN', env.get('SLACK_USER_TOKEN', '')))
 except:
     print('')
-" 2>/dev/null || echo "")
+" "$mcp_path" 2>/dev/null || echo "")
       if [[ -n "$token" ]]; then
         existing_slack_token="$token"
         if [[ "$token" == xoxb-* ]]; then
@@ -123,7 +123,7 @@ except:
       notion_key=$(python3 -c "
 import json, sys
 try:
-    with open('$mcp_path') as f:
+    with open(sys.argv[1]) as f:
         data = json.load(f)
     servers = data.get('mcpServers', data.get('mcp', {}).get('servers', {}))
     server = servers.get('slack-to-notion', {})
@@ -131,7 +131,7 @@ try:
     print(env.get('NOTION_API_KEY', ''))
 except:
     print('')
-" 2>/dev/null || echo "")
+" "$mcp_path" 2>/dev/null || echo "")
       if [[ -n "$notion_key" ]]; then
         existing_notion_api_key="$notion_key"
       fi
@@ -140,7 +140,7 @@ except:
       notion_pg=$(python3 -c "
 import json, sys
 try:
-    with open('$mcp_path') as f:
+    with open(sys.argv[1]) as f:
         data = json.load(f)
     servers = data.get('mcpServers', data.get('mcp', {}).get('servers', {}))
     server = servers.get('slack-to-notion', {})
@@ -148,7 +148,7 @@ try:
     print(env.get('NOTION_PARENT_PAGE_ID', ''))
 except:
     print('')
-" 2>/dev/null || echo "")
+" "$mcp_path" 2>/dev/null || echo "")
       if [[ -n "$notion_pg" ]]; then
         existing_notion_page="$notion_pg"
       fi
@@ -187,8 +187,11 @@ except:
   fi
 
   print_step "기존 플러그인 제거 중..."
-  claude mcp remove slack-to-notion
-  print_ok "기존 플러그인 제거 완료"
+  if claude mcp remove slack-to-notion 2>/dev/null; then
+    print_ok "기존 플러그인 제거 완료"
+  else
+    print_warn "기존 플러그인 제거 건너뜀 (이미 제거되었거나 접근 불가)"
+  fi
 
   print_step "uvx 캐시 갱신 중..."
   if uvx --reinstall slack-to-notion-mcp --help &>/dev/null 2>&1; then
@@ -220,6 +223,27 @@ if [[ "$IS_UPDATE" == "true" && -n "$existing_slack_token" ]]; then
   slack_env_name="$existing_slack_env_name"
   masked="${slack_token:0:10}...${slack_token: -4}"
   print_ok "기존 토큰 재사용 (${masked}) — 변경하려면 나중에 스크립트를 다시 실행하세요."
+elif [[ "$IS_UPDATE" == "true" ]]; then
+  print_warn "기존 Slack 토큰을 자동으로 찾지 못했습니다. 토큰을 다시 입력해주세요."
+  echo "  Bot 토큰(xoxb-...) 또는 User 토큰(xoxp-...)을 입력하세요."
+
+  while true; do
+    printf "  Slack 토큰: "
+    read -r slack_token < /dev/tty
+
+    if [[ "$slack_token" == xoxb-* ]]; then
+      slack_env_name="SLACK_BOT_TOKEN"
+      print_ok "Bot 토큰 확인 (환경변수: SLACK_BOT_TOKEN)"
+      break
+    elif [[ "$slack_token" == xoxp-* ]]; then
+      slack_env_name="SLACK_USER_TOKEN"
+      print_ok "User 토큰 확인 (환경변수: SLACK_USER_TOKEN)"
+      break
+    else
+      print_err "올바른 형식이 아닙니다. xoxb- 또는 xoxp- 로 시작해야 합니다."
+      echo "    토큰 발급 가이드: ${GUIDE_URL}"
+    fi
+  done
 else
   echo "  Bot 토큰(xoxb-...) 또는 User 토큰(xoxp-...)을 입력하세요."
 
@@ -251,6 +275,23 @@ if [[ "$IS_UPDATE" == "true" && -n "$existing_notion_api_key" ]]; then
   notion_api_key="$existing_notion_api_key"
   masked="${notion_api_key:0:10}...${notion_api_key: -4}"
   print_ok "기존 API Key 재사용 (${masked}) — 변경하려면 나중에 스크립트를 다시 실행하세요."
+elif [[ "$IS_UPDATE" == "true" ]]; then
+  print_warn "기존 Notion API Key를 자동으로 찾지 못했습니다. 다시 입력해주세요."
+  echo "  Notion Integration에서 발급받은 Internal Integration Token을 입력하세요."
+  echo "  (ntn_ 또는 secret_로 시작하는 값)"
+
+  while true; do
+    printf "  Notion API Key: "
+    read -r notion_api_key < /dev/tty
+
+    if [[ "$notion_api_key" == ntn_* ]] || [[ "$notion_api_key" == secret_* ]]; then
+      print_ok "Notion API Key 확인"
+      break
+    else
+      print_err "올바른 형식이 아닙니다. ntn_ 또는 secret_ 로 시작해야 합니다."
+      echo "    토큰 발급 가이드: ${GUIDE_URL}"
+    fi
+  done
 else
   echo "  Notion Integration에서 발급받은 Internal Integration Token을 입력하세요."
   echo "  (ntn_ 또는 secret_로 시작하는 값)"
@@ -277,6 +318,21 @@ print_step "[3/3] Notion 페이지 링크 입력"
 if [[ "$IS_UPDATE" == "true" && -n "$existing_notion_page" ]]; then
   notion_page="$existing_notion_page"
   print_ok "기존 페이지 링크 재사용 — 변경하려면 나중에 스크립트를 다시 실행하세요."
+elif [[ "$IS_UPDATE" == "true" ]]; then
+  print_warn "기존 Notion 페이지 링크를 자동으로 찾지 못했습니다. 다시 입력해주세요."
+  echo "  분석 결과를 저장할 Notion 페이지 URL 또는 페이지 ID를 입력하세요."
+
+  while true; do
+    printf "  Notion 페이지 링크: "
+    read -r notion_page < /dev/tty
+
+    if [[ -n "$notion_page" ]]; then
+      print_ok "Notion 페이지 확인"
+      break
+    else
+      print_err "페이지 링크를 입력해주세요."
+    fi
+  done
 else
   echo "  분석 결과를 저장할 Notion 페이지 URL 또는 페이지 ID를 입력하세요."
 
