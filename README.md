@@ -70,6 +70,17 @@ curl -sL https://raw.githubusercontent.com/dykim-base-project/claude-slack-to-no
 스크립트가 토큰 형식을 검증하고 `claude mcp add`를 자동 실행합니다.
 각 토큰 발급 방법은 아래 [API 토큰 설정](#api-토큰-설정)을 참고하세요.
 
+#### 업데이트
+
+이미 설치된 경우 동일한 명령으로 업데이트할 수 있습니다:
+
+```bash
+curl -sL https://raw.githubusercontent.com/dykim-base-project/claude-slack-to-notion/main/scripts/setup.sh | bash
+```
+
+기존 설치가 감지되면 자동으로 업데이트 모드로 전환됩니다.
+기존 토큰은 자동으로 재사용되므로 토큰을 다시 입력하지 않아도 됩니다.
+
 #### 방법 3: 수동 등록 (고급)
 
 아래 명령어로 MCP 서버를 등록할 때 환경변수를 함께 지정합니다:
