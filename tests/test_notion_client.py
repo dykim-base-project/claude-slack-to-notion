@@ -122,7 +122,8 @@ class TestNotionClient:
 
     def test_create_analysis_page_success(self):
         self.mock_api.pages.create.return_value = {
-            "url": "https://www.notion.so/test-page-id"
+            "id": "test-page-id",
+            "url": "https://www.notion.so/test-page-id",
         }
         url = self.client.create_analysis_page("parent-id", "테스트 제목", [])
         assert url == "https://www.notion.so/test-page-id"
@@ -132,12 +133,101 @@ class TestNotionClient:
         assert call_kwargs["properties"]["title"]["title"][0]["text"]["content"] == "테스트 제목"
 
     def test_create_analysis_page_with_blocks(self):
-        self.mock_api.pages.create.return_value = {"url": "https://notion.so/page"}
+        self.mock_api.pages.create.return_value = {
+            "id": "page-id",
+            "url": "https://notion.so/page",
+        }
         blocks = [{"object": "block", "type": "paragraph", "paragraph": {"rich_text": []}}]
         self.client.create_analysis_page("parent-id", "제목", blocks)
 
         call_kwargs = self.mock_api.pages.create.call_args[1]
         assert call_kwargs["children"] == blocks
+
+    def test_create_analysis_page_over_100_blocks(self):
+        """블록이 100개 초과일 때 처음 100개로 생성 후 나머지를 append한다."""
+        self.mock_api.pages.create.return_value = {
+            "id": "new-page-id",
+            "url": "https://notion.so/new-page",
+        }
+        blocks = [
+            {"object": "block", "type": "paragraph", "paragraph": {"rich_text": []}}
+            for _ in range(250)
+        ]
+        url = self.client.create_analysis_page("parent-id", "제목", blocks)
+        assert url == "https://notion.so/new-page"
+
+        # pages.create 는 처음 100개만
+        create_kwargs = self.mock_api.pages.create.call_args[1]
+        assert len(create_kwargs["children"]) == 100
+
+        # blocks.children.append 는 2회: 100개 + 50개
+        append_calls = self.mock_api.blocks.children.append.call_args_list
+        assert len(append_calls) == 2
+        assert append_calls[0][1]["block_id"] == "new-page-id"
+        assert len(append_calls[0][1]["children"]) == 100
+        assert len(append_calls[1][1]["children"]) == 50
+
+    def test_create_analysis_page_exactly_100_blocks(self):
+        """블록이 정확히 100개일 때 append를 호출하지 않는다."""
+        self.mock_api.pages.create.return_value = {
+            "id": "page-id",
+            "url": "https://notion.so/page",
+        }
+        blocks = [
+            {"object": "block", "type": "paragraph", "paragraph": {"rich_text": []}}
+            for _ in range(100)
+        ]
+        self.client.create_analysis_page("parent-id", "제목", blocks)
+
+        create_kwargs = self.mock_api.pages.create.call_args[1]
+        assert len(create_kwargs["children"]) == 100
+        self.mock_api.blocks.children.append.assert_not_called()
+
+    def test_check_duplicate_pagination(self):
+        """has_more=True 시 next_cursor를 사용해 다음 페이지를 조회한다."""
+        # 첫 번째 응답: has_more=True, 찾는 페이지 없음
+        first_response = {
+            "results": [
+                {"type": "child_page", "child_page": {"title": "다른 페이지"}},
+            ],
+            "has_more": True,
+            "next_cursor": "cursor-abc",
+        }
+        # 두 번째 응답: has_more=False, 찾는 페이지 있음
+        second_response = {
+            "results": [
+                {"type": "child_page", "child_page": {"title": "찾는 페이지"}},
+            ],
+            "has_more": False,
+            "next_cursor": None,
+        }
+        self.mock_api.blocks.children.list.side_effect = [first_response, second_response]
+
+        result = self.client.check_duplicate("page-id", "찾는 페이지")
+        assert result is True
+
+        calls = self.mock_api.blocks.children.list.call_args_list
+        assert len(calls) == 2
+        # 두 번째 호출에 start_cursor가 전달되어야 함
+        assert calls[1][1]["start_cursor"] == "cursor-abc"
+
+    def test_check_duplicate_pagination_not_found(self):
+        """여러 페이지를 조회해도 없으면 False를 반환한다."""
+        first_response = {
+            "results": [{"type": "child_page", "child_page": {"title": "A"}}],
+            "has_more": True,
+            "next_cursor": "cursor-1",
+        }
+        second_response = {
+            "results": [{"type": "child_page", "child_page": {"title": "B"}}],
+            "has_more": False,
+            "next_cursor": None,
+        }
+        self.mock_api.blocks.children.list.side_effect = [first_response, second_response]
+
+        result = self.client.check_duplicate("page-id", "없는 페이지")
+        assert result is False
+        assert self.mock_api.blocks.children.list.call_count == 2
 
     def test_build_page_blocks_heading1(self):
         blocks = self.client.build_page_blocks("# 제목")
