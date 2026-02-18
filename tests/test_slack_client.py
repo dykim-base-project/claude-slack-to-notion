@@ -198,3 +198,107 @@ class TestSlackClientFetchMessages:
         with pytest.raises(SlackClientError) as exc_info:
             self.client.fetch_thread_replies("C001", "0000000000.000000")
         assert "스레드를 찾을 수 없습니다" in exc_info.value.message
+
+
+class TestGetUserName:
+    """사용자 이름 조회 테스트."""
+
+    def setup_method(self):
+        with patch("slack_to_notion.slack_client.WebClient"):
+            self.client = SlackClient("xoxb-fake-token")
+            self.mock_api = self.client.client
+
+    def test_display_name(self):
+        self.mock_api.users_info.return_value = {
+            "user": {
+                "real_name": "Kim Dongyoung",
+                "profile": {"display_name": "김동영", "real_name": "Kim Dongyoung"},
+            }
+        }
+        assert self.client.get_user_name("U001") == "김동영"
+
+    def test_fallback_to_real_name(self):
+        self.mock_api.users_info.return_value = {
+            "user": {
+                "real_name": "Kim Dongyoung",
+                "profile": {"display_name": "", "real_name": "Kim Dongyoung"},
+            }
+        }
+        assert self.client.get_user_name("U001") == "Kim Dongyoung"
+
+    def test_fallback_to_user_real_name(self):
+        self.mock_api.users_info.return_value = {
+            "user": {
+                "real_name": "Kim",
+                "profile": {"display_name": "", "real_name": ""},
+            }
+        }
+        assert self.client.get_user_name("U001") == "Kim"
+
+    def test_fallback_to_user_id(self):
+        self.mock_api.users_info.return_value = {
+            "user": {
+                "profile": {"display_name": "", "real_name": ""},
+            }
+        }
+        assert self.client.get_user_name("U001") == "U001"
+
+    def test_api_error_returns_user_id(self):
+        self.mock_api.users_info.side_effect = _make_slack_error("user_not_found")
+        assert self.client.get_user_name("U999") == "U999"
+
+    def test_cache_prevents_duplicate_calls(self):
+        self.mock_api.users_info.return_value = {
+            "user": {"profile": {"display_name": "테스트", "real_name": ""}}
+        }
+        self.client.get_user_name("U001")
+        self.client.get_user_name("U001")
+        assert self.mock_api.users_info.call_count == 1
+
+    def test_cache_error_result(self):
+        """API 실패 시에도 캐시하여 재호출 방지."""
+        self.mock_api.users_info.side_effect = _make_slack_error("user_not_found")
+        self.client.get_user_name("U999")
+        self.client.get_user_name("U999")
+        assert self.mock_api.users_info.call_count == 1
+
+
+class TestResolveUserNames:
+    """메시지 리스트 사용자 이름 변환 테스트."""
+
+    def setup_method(self):
+        with patch("slack_to_notion.slack_client.WebClient"):
+            self.client = SlackClient("xoxb-fake-token")
+            self.mock_api = self.client.client
+
+    def test_adds_user_name_field(self):
+        self.mock_api.users_info.return_value = {
+            "user": {"profile": {"display_name": "김동영", "real_name": ""}}
+        }
+        messages = [{"user": "U001", "text": "hello"}]
+        result = self.client.resolve_user_names(messages)
+        assert result[0]["user_name"] == "김동영"
+        assert result[0]["user"] == "U001"  # 원본 유지
+
+    def test_skips_messages_without_user(self):
+        messages = [{"text": "system message"}]
+        result = self.client.resolve_user_names(messages)
+        assert "user_name" not in result[0]
+
+    def test_multiple_users(self):
+        def users_info_side_effect(user):
+            names = {"U001": "김동영", "U002": "이철수"}
+            return {"user": {"profile": {"display_name": names.get(user, ""), "real_name": ""}}}
+
+        self.mock_api.users_info.side_effect = users_info_side_effect
+        messages = [
+            {"user": "U001", "text": "msg1"},
+            {"user": "U002", "text": "msg2"},
+            {"user": "U001", "text": "msg3"},
+        ]
+        result = self.client.resolve_user_names(messages)
+        assert result[0]["user_name"] == "김동영"
+        assert result[1]["user_name"] == "이철수"
+        assert result[2]["user_name"] == "김동영"
+        # U001은 캐시되어 1번만 호출
+        assert self.mock_api.users_info.call_count == 2
