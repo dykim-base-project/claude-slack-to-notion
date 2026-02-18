@@ -44,33 +44,37 @@ graph LR
 ### 요구사항
 
 - [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code)
-- Python 3.10 이상 (macOS: `brew install python3`)
+- [uv](https://docs.astral.sh/uv/) (macOS: `brew install uv` / 기타: `curl -LsSf https://astral.sh/uv/install.sh | sh`)
 - Slack 토큰 (Bot Token 또는 User Token 중 택 1)
 - Notion API Key
 - Notion Parent Page ID
 
 ### 설치
 
-플러그인 레포를 클론하고, 작업 디렉토리에서 플러그인을 로드하여 Claude Code를 실행합니다.
+#### 방법 1: 마켓플레이스 설치 (권장)
 
-```bash
-# 1. 별도 위치에 플러그인 클론 (작업 디렉토리와 분리)
-cd ~
-git clone https://github.com/dykim-base-project/claude-slack-to-notion.git
-
-# 2. 환경변수 설정 (아래 "API 토큰 설정" 참고)
-cd ~/claude-slack-to-notion
-cp .env.example .env
-# .env 파일에 토큰 값 입력 후...
-
-# 3. 작업할 디렉토리에서 플러그인을 로드하여 실행
-cd ~/my-project
-claude --plugin-dir ~/claude-slack-to-notion
+```
+/install-plugin slack-to-notion
 ```
 
-> `--plugin-dir`은 **해당 세션에서만** 플러그인을 로드합니다. 매 실행 시 지정해야 합니다.
-> 최초 실행 시 Python 환경(venv)이 자동으로 설정됩니다.
-> 현재 **macOS/Linux**만 지원합니다.
+> 마켓플레이스 등록 후 사용 가능합니다. 등록 전까지는 방법 2를 사용하세요.
+
+#### 방법 2: 수동 등록
+
+아래 명령어로 MCP 서버를 등록할 때 환경변수를 함께 지정합니다:
+
+```bash
+claude mcp add slack-to-notion \
+  --transport stdio \
+  -e SLACK_BOT_TOKEN=xoxb-your-token \
+  -e NOTION_API_KEY=secret_your-key \
+  -e NOTION_PARENT_PAGE_ID=https://notion.so/your-page \
+  -- uvx slack-to-notion-mcp
+```
+
+각 토큰 발급 방법은 아래 [API 토큰 설정](#api-토큰-설정)을 참고하세요.
+
+> `uvx`는 실행 시 패키지를 자동으로 다운로드하므로 별도 설치 과정이 없습니다. uv가 설치되어 있어야 합니다.
 
 ### API 토큰 설정
 
@@ -182,35 +186,37 @@ Integration은 연결된 페이지만 접근할 수 있습니다. 분석 결과�
 
 1. 2단계에서 Integration을 연결한 Notion 페이지를 엽니다
 2. 페이지 우측 상단의 **`...`** (점 3개) 버튼 클릭 → **"링크 복사"** 클릭
-3. 복사된 링크를 4단계에서 `.env` 파일에 그대로 붙여넣습니다
+3. 복사된 링크를 4단계에서 환경변수 값으로 사용합니다
 
 > Page ID가 자동으로 추출되므로 URL에서 ID를 직접 찾을 필요가 없습니다.
 
 #### 4단계: 환경변수 설정
 
-발급받은 3개 토큰을 환경변수로 설정합니다. **플러그인을 클론한 디렉토리**에 `.env` 파일을 만드는 방법을 권장합니다.
+발급받은 3개 토큰을 환경변수로 설정합니다.
 
-**터미널에서 다음 명령어를 실행합니다:**
+**uvx로 설치한 경우 (`claude mcp add` 방법):**
+
+[설치 섹션](#설치)의 방법 2에서 `-e` 플래그로 환경변수를 함께 지정합니다. 발급받은 실제 토큰 값으로 교체하세요:
 
 ```bash
-# 플러그인을 클론한 디렉토리로 이동
-cd ~/claude-slack-to-notion
+claude mcp add slack-to-notion \
+  --transport stdio \
+  -e SLACK_BOT_TOKEN=xoxb-1234-5678-abcdefgh \
+  -e NOTION_API_KEY=secret_abc123def456... \
+  -e NOTION_PARENT_PAGE_ID=https://www.notion.so/abc123def456...?source=copy_link \
+  -- uvx slack-to-notion-mcp
+```
 
-# .env.example 파일을 복사하여 .env 파일 생성
+> `NOTION_PARENT_PAGE_ID`에는 Notion 페이지 URL을 그대로 붙여넣으면 됩니다. Page ID가 자동으로 추출됩니다.
+
+**로컬 개발 환경의 경우:**
+
+레포 루트에 `.env` 파일을 생성합니다:
+
+```bash
 cp .env.example .env
+# .env 파일을 편집기로 열어 토큰 값 입력
 ```
-
-**생성된 `.env` 파일을 텍스트 편집기로 열어 토큰 값을 입력합니다:**
-
-```bash
-# macOS 기본 편집기로 열기
-open -e .env
-
-# 또는 VS Code로 열기
-code .env
-```
-
-**`.env` 파일 내용을 다음과 같이 수정합니다:**
 
 ```
 # 방식 A를 선택한 경우 (Bot 토큰)
@@ -222,8 +228,6 @@ SLACK_BOT_TOKEN=xoxb-1234-5678-abcdefgh                                         
 NOTION_API_KEY=secret_abc123def456...                                              ← 2단계에서 복사한 값
 NOTION_PARENT_PAGE_ID=https://www.notion.so/abc123def456...?source=copy_link       ← 3단계에서 복사한 링크
 ```
-
-> `NOTION_PARENT_PAGE_ID`에는 Notion 페이지 URL을 그대로 붙여넣으면 됩니다. Page ID가 자동으로 추출됩니다.
 
 > `.env` 파일에는 토큰이 포함되어 있으므로 Git에 업로드되지 않도록 `.gitignore`에 이미 등록되어 있습니다.
 
@@ -287,7 +291,6 @@ Slack #general 채널 메시지 조회해줘
 
 ### 제약사항
 
-- **플랫폼**: macOS/Linux만 지원 (Windows 지원 예정)
 - **API 토큰 관리**: Slack API 토큰, Notion API 키는 환경변수로 관리 (Git 추적 금지)
 - **개인 메시지(DM) 제외**: 보안상 개인 DM 수집 지원하지 않음
 - **API Rate Limit**: Slack/Notion API Rate Limit 고려 필요 (과도한 요청 시 제한 발생 가능)
@@ -297,14 +300,14 @@ Slack #general 채널 메시지 조회해줘
 
 | 증상 | 원인 | 해결 방법 |
 |------|------|-----------|
-| `[오류] python3이 설치되지 않았습니다.` | Python 3 미설치 | macOS: `brew install python3` |
-| `SLACK_BOT_TOKEN 또는 SLACK_USER_TOKEN 환경변수가 설정되지 않았습니다` | `.env` 파일 미생성 또는 토큰 미입력 | [4단계: 환경변수 설정](#4단계-환경변수-설정) 참고 |
+| `uvx: command not found` | uv 미설치 | `brew install uv` 또는 [uv 설치 가이드](https://docs.astral.sh/uv/getting-started/installation/) 참고 |
+| `No module named slack_to_notion` | 패키지 배포 전 | PyPI 배포 후 해결. 개발 중에는 `uvx --from . slack-to-notion-mcp` 사용 |
+| `SLACK_BOT_TOKEN 또는 SLACK_USER_TOKEN 환경변수가 설정되지 않았습니다` | 환경변수 미설정 | [4단계: 환경변수 설정](#4단계-환경변수-설정) 참고 |
 | `not_in_channel` 에러 (Bot 토큰) | Bot이 해당 채널에 초대되지 않음 | 채널 설정 → Integrations → Add apps에서 Bot 추가 ([방식 A](#방식-a-bot-토큰-발급-권장) 참고) |
 | `not_in_channel` 에러 (사용자 토큰) | 해당 채널에 참여하지 않음 | Slack에서 채널에 참여한 뒤 다시 시도 |
-| `invalid_auth` 에러 | 토큰이 잘못되었거나 만료됨 | [Slack API](https://api.slack.com/apps)에서 토큰 재확인 후 `.env` 파일 수정 |
+| `invalid_auth` 에러 | 토큰이 잘못되었거나 만료됨 | [Slack API](https://api.slack.com/apps)에서 토큰 재확인 후 환경변수 수정 |
 | `Notion API 키가 올바르지 않습니다` | Notion API Key가 잘못됨 | [Notion Integrations](https://www.notion.so/my-integrations)에서 Secret 재확인 |
 | `Notion 페이지를 찾을 수 없습니다` | Integration이 페이지에 연결되지 않음 | [2단계](#2단계-notion-api-key-발급)의 "Integration을 Notion 페이지에 연결하기" 참고 |
-| `패키지 설치에 실패했습니다` | 네트워크 문제 또는 Python 버전 | 네트워크 확인 + Python 3.10 이상인지 확인 |
 
 ## 개발 과정
 
@@ -342,10 +345,11 @@ claude-slack-to-notion/
 │   └── plugin.json                  # 플러그인 매니페스트
 ├── .mcp.json                        # MCP 서버 설정
 ├── scripts/
-│   └── run-server.sh                # 자동 환경 설정 스크립트
+│   └── run-server.sh                # 레거시 실행 스크립트 (하위 호환)
 ├── src/
 │   └── slack_to_notion/
 │       ├── __init__.py              # 패키지 초기화
+│       ├── __main__.py              # python -m 실행 지원
 │       ├── mcp_server.py            # MCP 서버 (도구 제공)
 │       ├── slack_client.py          # Slack API 연동
 │       ├── analyzer.py              # AI 분석 엔진
@@ -374,9 +378,17 @@ claude-slack-to-notion/
 ```bash
 git clone https://github.com/dykim-base-project/claude-slack-to-notion.git
 cd claude-slack-to-notion
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
+uv sync --dev
+```
+
+실행:
+
+```bash
+# MCP 서버 직접 실행
+uv run slack-to-notion-mcp
+
+# 또는 모듈로 실행
+uv run python -m slack_to_notion
 ```
 
 ### 기여 방법
@@ -393,4 +405,4 @@ pip install -e ".[dev]"
 
 ## 라이선스
 
-미정
+MIT
