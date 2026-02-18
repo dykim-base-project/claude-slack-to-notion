@@ -87,24 +87,6 @@ uvx slack-to-notion-mcp
 | `config.py` | 환경변수 검증 로직 변경 불필요 |
 | 빌드 백엔드 (setuptools) | hatchling 전환은 선택사항, 이번 범위 외 |
 
-## Java 개발자 관점
-
-Java 생태계에 비유하면:
-
-| Python (uv/uvx) | Java |
-|------------------|------|
-| `uvx slack-to-notion-mcp` | `jbang slack-to-notion@...` 또는 `mvn exec:java` |
-| PyPI | Maven Central |
-| `uv sync` | `mvn dependency:resolve` |
-| `pyproject.toml` | `pom.xml` |
-
-uvx는 "글로벌 설치 없이 패키지를 즉시 실행"하는 도구다. Java의 `jbang`이나 Node의 `npx`와 동일한 컨셉.
-
-Python 생태계에서 `uv`/`uvx`가 가져온 변화:
-- **속도**: pip 대비 10-100배 빠른 패키지 설치 (Rust 구현)
-- **DX**: venv 생성 + 의존성 설치를 `uv sync` 한 줄로
-- **표준화**: Anthropic MCP 공식 서버가 uvx 패턴 채택
-
 ## 결과
 
 ### 변경 전 (사용자 경험)
@@ -128,4 +110,4 @@ claude mcp add slack-to-notion -- uvx slack-to-notion-mcp  # 최초 1회
 # 이후 자동 실행
 ```
 
-> 이 ADR은 향후 블로그 포스팅(uvx 시리즈)의 소재가 된다. 포스팅 범위와 형태는 별도 이슈로 결정.
+> uvx 전환 과정의 생태계 분석과 Java 개발자 관점은 [블로그 시리즈](https://idean3885.github.io/posts/building-first-tool-with-ai/)에서 다룬다.
