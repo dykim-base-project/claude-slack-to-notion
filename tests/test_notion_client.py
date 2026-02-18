@@ -202,6 +202,66 @@ class TestNotionClient:
             "paragraph",
         ]
 
+    def test_build_page_blocks_numbered_list(self):
+        content = "1. 첫 번째\n2. 두 번째\n3. 세 번째"
+        blocks = self.client.build_page_blocks(content)
+        assert len(blocks) == 3
+        for block in blocks:
+            assert block["type"] == "numbered_list_item"
+        assert blocks[0]["numbered_list_item"]["rich_text"][0]["text"]["content"] == "첫 번째"
+        assert blocks[1]["numbered_list_item"]["rich_text"][0]["text"]["content"] == "두 번째"
+        assert blocks[2]["numbered_list_item"]["rich_text"][0]["text"]["content"] == "세 번째"
+
+    def test_build_page_blocks_code_block_no_language(self):
+        content = "```\nprint('hello')\n```"
+        blocks = self.client.build_page_blocks(content)
+        assert len(blocks) == 1
+        assert blocks[0]["type"] == "code"
+        assert blocks[0]["code"]["language"] == "plain text"
+        assert blocks[0]["code"]["rich_text"][0]["text"]["content"] == "print('hello')"
+
+    def test_build_page_blocks_code_block_with_language(self):
+        content = "```python\ndef foo():\n    return 1\n```"
+        blocks = self.client.build_page_blocks(content)
+        assert len(blocks) == 1
+        assert blocks[0]["type"] == "code"
+        assert blocks[0]["code"]["language"] == "python"
+        assert "def foo():" in blocks[0]["code"]["rich_text"][0]["text"]["content"]
+
+    def test_build_page_blocks_table_basic(self):
+        content = "| 이름 | 나이 |\n|---|---|\n| 홍길동 | 30 |"
+        blocks = self.client.build_page_blocks(content)
+        assert len(blocks) == 1
+        block = blocks[0]
+        assert block["type"] == "table"
+        assert block["table"]["table_width"] == 2
+        assert block["table"]["has_column_header"] is True
+        # 구분선 제외하면 2개 행
+        assert len(block["table"]["children"]) == 2
+
+    def test_build_page_blocks_table_header_row(self):
+        content = "| 컬럼1 | 컬럼2 | 컬럼3 |\n|---|---|---|\n| A | B | C |"
+        blocks = self.client.build_page_blocks(content)
+        assert blocks[0]["table"]["table_width"] == 3
+        header_row = blocks[0]["table"]["children"][0]
+        assert header_row["table_row"]["cells"][0][0]["text"]["content"] == "컬럼1"
+        assert header_row["table_row"]["cells"][1][0]["text"]["content"] == "컬럼2"
+        assert header_row["table_row"]["cells"][2][0]["text"]["content"] == "컬럼3"
+
+    def test_build_page_blocks_table_empty_cell(self):
+        content = "| A |  | C |\n|---|---|---|\n| D | E | F |"
+        blocks = self.client.build_page_blocks(content)
+        header_row = blocks[0]["table"]["children"][0]
+        # 빈 셀 허용
+        assert header_row["table_row"]["cells"][1][0]["text"]["content"] == ""
+
+    def test_build_page_blocks_table_no_separator(self):
+        content = "| 이름 | 나이 |\n| 홍길동 | 30 |"
+        blocks = self.client.build_page_blocks(content)
+        assert len(blocks) == 1
+        assert blocks[0]["type"] == "table"
+        assert len(blocks[0]["table"]["children"]) == 2
+
 
 class TestNotionClientErrorFormatting:
     """에러 메시지 변환 테스트."""
