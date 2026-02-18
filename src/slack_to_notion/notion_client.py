@@ -76,8 +76,10 @@ class NotionClient:
             return "Notion 페이지를 찾을 수 없습니다. Integration이 해당 페이지에 연결되어 있는지 확인하세요."
         elif code == "restricted_resource":
             return "해당 Notion 페이지에 접근 권한이 없습니다. Integration 연결을 확인하세요."
+        elif code == "validation_error":
+            return "Notion 요청이 올바르지 않습니다. NOTION_PARENT_PAGE_ID가 유효한 페이지 ID인지 확인하세요."
         else:
-            return f"Notion API 오류가 발생했습니다: {code}. 자세한 내용은 README.md를 참고하세요."
+            return f"예상치 못한 오류가 발생했습니다 ({code}). 문제가 지속되면 README.md를 참고하세요."
 
     def check_duplicate(self, parent_page_id: str, title: str) -> bool:
         """상위 페이지 하위에서 동일 제목의 페이지가 있는지 확인."""

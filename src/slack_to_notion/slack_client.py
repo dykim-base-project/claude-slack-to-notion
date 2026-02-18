@@ -177,4 +177,7 @@ class SlackClient:
                 return "사용자 토큰에 필요한 권한이 없습니다. Slack App 설정에서 User Token Scopes를 추가하세요."
             return "Bot에 필요한 권한이 없습니다. Slack App 설정에서 channels:history, channels:read 권한을 추가하세요."
 
-        return f"Slack API 오류가 발생했습니다: {error_code}. 자세한 내용은 README.md를 참고하세요."
+        if error_code == "thread_not_found":
+            return "해당 스레드를 찾을 수 없습니다. 스레드 타임스탬프가 올바른지 확인하세요."
+
+        return f"예상치 못한 오류가 발생했습니다 ({error_code}). 문제가 지속되면 README.md를 참고하세요."
