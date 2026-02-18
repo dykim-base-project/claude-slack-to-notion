@@ -166,3 +166,35 @@ class TestSlackClientFetchMessages:
         }
         info = self.client.fetch_channel_info("C001")
         assert info["name"] == "general"
+
+    # ── fetch_channel_messages limit 경계값 ──
+
+    def test_fetch_messages_limit_zero_calls_api_with_zero(self):
+        """limit=0 으로 직접 API 호출 — SlackClient는 클램핑하지 않음(mcp_server가 담당)."""
+        self.mock_api.conversations_history.return_value = {"messages": []}
+        self.client.fetch_channel_messages("C001", limit=0)
+        call_kwargs = self.mock_api.conversations_history.call_args[1]
+        assert call_kwargs["limit"] == 0
+
+    def test_fetch_messages_limit_negative_calls_api_with_negative(self):
+        """limit 음수는 SlackClient에서 그대로 전달 — 클램핑은 mcp_server 담당."""
+        self.mock_api.conversations_history.return_value = {"messages": []}
+        self.client.fetch_channel_messages("C001", limit=-10)
+        call_kwargs = self.mock_api.conversations_history.call_args[1]
+        assert call_kwargs["limit"] == -10
+
+    def test_fetch_messages_limit_1001_calls_api_with_1001(self):
+        """limit=1001은 SlackClient에서 그대로 전달 — 클램핑은 mcp_server 담당."""
+        self.mock_api.conversations_history.return_value = {"messages": []}
+        self.client.fetch_channel_messages("C001", limit=1001)
+        call_kwargs = self.mock_api.conversations_history.call_args[1]
+        assert call_kwargs["limit"] == 1001
+
+    # ── fetch_thread_replies thread_not_found ──
+
+    def test_fetch_thread_not_found(self):
+        """thread_not_found 에러 발생 시 SlackClientError로 변환."""
+        self.mock_api.conversations_replies.side_effect = _make_slack_error("thread_not_found")
+        with pytest.raises(SlackClientError) as exc_info:
+            self.client.fetch_thread_replies("C001", "0000000000.000000")
+        assert "스레드를 찾을 수 없습니다" in exc_info.value.message
