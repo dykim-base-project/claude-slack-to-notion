@@ -378,7 +378,7 @@ claude-slack-to-notion/
 │   └── plugin.json                  # 플러그인 매니페스트
 ├── .mcp.json                        # MCP 서버 설정
 ├── scripts/
-│   └── run-server.sh                # 레거시 실행 스크립트 (하위 호환)
+│   └── setup.sh                     # 대화형 설치 스크립트
 ├── src/
 │   └── slack_to_notion/
 │       ├── __init__.py              # 패키지 초기화
@@ -386,8 +386,7 @@ claude-slack-to-notion/
 │       ├── mcp_server.py            # MCP 서버 (도구 제공)
 │       ├── slack_client.py          # Slack API 연동
 │       ├── analyzer.py              # AI 분석 엔진
-│       ├── notion_client.py         # Notion API 연동
-│       └── config.py                # 설정 관리
+│       └── notion_client.py         # Notion API 연동
 ├── tests/                           # 단위 테스트
 ├── pyproject.toml                   # Python 패키지 설정
 ├── CLAUDE.md                        # AI 협업 가이드
