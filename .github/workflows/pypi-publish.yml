@@ -6,7 +6,36 @@ on:
       - "v*"
 
 jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: uv 설치
+        uses: astral-sh/setup-uv@v4
+
+      - name: 태그-버전 일치 확인
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          PKG_VERSION=$(uv run python -c "
+          import tomllib
+          with open('pyproject.toml', 'rb') as f:
+              print(tomllib.load(f)['project']['version'])
+          ")
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::태그($TAG_VERSION)와 pyproject.toml 버전($PKG_VERSION)이 불일치합니다."
+            exit 1
+          fi
+          echo "버전 일치 확인: $TAG_VERSION"
+
+      - name: 의존성 설치
+        run: uv sync --extra dev
+
+      - name: 테스트 실행
+        run: uv run pytest tests/ -v
+
   publish:
+    needs: validate
     runs-on: ubuntu-latest
     permissions:
       id-token: write
