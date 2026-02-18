@@ -119,10 +119,92 @@ class NotionClient:
         """자유 형식 텍스트를 Notion 블록으로 변환."""
         blocks = []
         lines = content_text.split("\n")
+        i = 0
 
-        for line in lines:
+        while i < len(lines):
+            line = lines[i]
             stripped = line.strip()
+
+            # 코드블록: ``` 으로 시작
+            if stripped.startswith("```"):
+                language = stripped[3:].strip() or "plain text"
+                code_lines = []
+                i += 1
+                while i < len(lines):
+                    code_line = lines[i]
+                    if code_line.strip().startswith("```"):
+                        i += 1
+                        break
+                    code_lines.append(code_line)
+                    i += 1
+                code_content = "\n".join(code_lines)
+                blocks.append(
+                    {
+                        "object": "block",
+                        "type": "code",
+                        "code": {
+                            "rich_text": split_rich_text(code_content),
+                            "language": language,
+                        },
+                    }
+                )
+                continue
+
+            # 마크다운 테이블: | 로 시작하는 연속 라인
+            if stripped.startswith("|"):
+                table_lines = []
+                while i < len(lines) and lines[i].strip().startswith("|"):
+                    table_lines.append(lines[i].strip())
+                    i += 1
+
+                # 구분선 행 제거 (|---|---| 패턴)
+                data_lines = [
+                    l for l in table_lines
+                    if not re.match(r"^\|[\s\-:|]+\|", l)
+                ]
+
+                if data_lines:
+                    rows = []
+                    table_width = 0
+                    for row_line in data_lines:
+                        # 양 끝 | 제거 후 셀 파싱
+                        inner = row_line.strip("|")
+                        cells = [cell.strip() for cell in inner.split("|")]
+                        table_width = max(table_width, len(cells))
+                        rows.append(cells)
+
+                    # 모든 행의 셀 수를 table_width에 맞게 패딩
+                    children = []
+                    for cells in rows:
+                        padded = cells + [""] * (table_width - len(cells))
+                        children.append(
+                            {
+                                "type": "table_row",
+                                "table_row": {
+                                    "cells": [
+                                        [{"type": "text", "text": {"content": cell}}]
+                                        for cell in padded
+                                    ]
+                                },
+                            }
+                        )
+
+                    blocks.append(
+                        {
+                            "object": "block",
+                            "type": "table",
+                            "table": {
+                                "table_width": table_width,
+                                "has_column_header": True,
+                                "has_row_header": False,
+                                "children": children,
+                            },
+                        }
+                    )
+                continue
+
             if not stripped:
+                i += 1
                 continue
 
             if stripped.startswith("# "):
@@ -161,6 +243,18 @@ class NotionClient:
                         },
                     }
                 )
+            elif re.match(r"^\d+\. ", stripped):
+                # 번호 목록: "1. ", "2. " 등
+                content = re.sub(r"^\d+\. ", "", stripped)
+                blocks.append(
+                    {
+                        "object": "block",
+                        "type": "numbered_list_item",
+                        "numbered_list_item": {
+                            "rich_text": split_rich_text(content)
+                        },
+                    }
+                )
             else:
                 blocks.append(
                     {
@@ -169,5 +263,7 @@ class NotionClient:
                         "paragraph": {"rich_text": split_rich_text(stripped)},
                     }
                 )
+
+            i += 1
 
         return blocks
