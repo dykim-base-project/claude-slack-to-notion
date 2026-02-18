@@ -333,6 +333,7 @@ Slack #general 채널 메시지 조회해줘
 
 | 증상 | 원인 | 해결 방법 |
 |------|------|-----------|
+| 설치 후 첫 실행에서 플러그인이 인식되지 않음 | Claude Code CLI 설정 파일 캐시/타이밍 이슈 | `/exit`으로 종료 후 `claude`를 다시 실행하면 정상 동작합니다 |
 | `uvx: command not found` | uv 미설치 | `brew install uv` 또는 [uv 설치 가이드](https://docs.astral.sh/uv/getting-started/installation/) 참고 |
 | `No module named slack_to_notion` | 패키지 배포 전 | PyPI 배포 후 해결. 개발 중에는 `uvx --from . slack-to-notion-mcp` 사용 |
 | `SLACK_BOT_TOKEN 또는 SLACK_USER_TOKEN 환경변수가 설정되지 않았습니다` | 환경변수 미설정 | [4단계: 환경변수 설정](#4단계-환경변수-설정) 참고 |
