@@ -98,17 +98,17 @@ done
 # ============================================================
 print_step "[2/3] Notion API Key 입력"
 echo "  Notion Integration에서 발급받은 Internal Integration Token을 입력하세요."
-echo "  (secret_로 시작하는 값)"
+echo "  (ntn_ 또는 secret_로 시작하는 값)"
 
 while true; do
   printf "  Notion API Key: "
   read -r notion_api_key < /dev/tty
 
-  if [[ "$notion_api_key" == secret_* ]]; then
+  if [[ "$notion_api_key" == ntn_* ]] || [[ "$notion_api_key" == secret_* ]]; then
     print_ok "Notion API Key 확인"
     break
   else
-    print_err "올바른 형식이 아닙니다. secret_ 로 시작해야 합니다."
+    print_err "올바른 형식이 아닙니다. ntn_ 또는 secret_ 로 시작해야 합니다."
     echo "    토큰 발급 가이드: ${GUIDE_URL}"
   fi
 done

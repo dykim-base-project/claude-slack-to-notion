@@ -113,7 +113,7 @@ claude mcp add slack-to-notion \
 |------|------|------|
 | `SLACK_BOT_TOKEN` | Slack 채널 메시지 읽기 (권장) | `xoxb-`로 시작 |
 | `SLACK_USER_TOKEN` | Slack 채널 메시지 읽기 (대안) | `xoxp-`로 시작 |
-| `NOTION_API_KEY` | Notion 페이지 생성 | `secret_`로 시작 |
+| `NOTION_API_KEY` | Notion 페이지 생성 | `ntn_` 또는 `secret_`로 시작 |
 | `NOTION_PARENT_PAGE_ID` | 분석 결과가 저장될 Notion 페이지 | 페이지 링크 또는 32자 ID |
 
 > `SLACK_BOT_TOKEN`과 `SLACK_USER_TOKEN` 중 **하나만 설정**하면 됩니다. 둘 다 설정하면 Bot 토큰이 사용됩니다.
@@ -195,7 +195,7 @@ Notion Integration은 분석 결과를 Notion 페이지로 작성하는 역할�
    - **이름**: Integration 이름 (예: `slack-analyzer`)
    - **연결된 워크스페이스**: 사용할 Notion 워크스페이스 선택
 5. **"저장"** 클릭
-6. **"내부 통합 시크릿"** 이 표시됩니다. **"표시"** → 복사 버튼을 눌러 토큰을 복사합니다. (`secret_`로 시작하는 문자열)
+6. **"내부 통합 시크릿"** 이 표시됩니다. **"표시"** → 복사 버튼을 눌러 토큰을 복사합니다. (`ntn_` 또는 `secret_`로 시작하는 문자열)
 
 > 시크릿 조회 시 400 에러가 발생하면 **시크릿 브라우징(incognito)** 모드에서 다시 시도하세요. 브라우저 캐시나 확장 프로그램이 간섭할 수 있습니다.
 
