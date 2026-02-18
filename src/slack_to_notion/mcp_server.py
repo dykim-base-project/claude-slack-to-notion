@@ -120,6 +120,7 @@ def fetch_messages(
         client = _get_slack_client()
         limit = max(1, min(limit, 1000))
         messages = client.fetch_channel_messages(channel_id, limit, oldest)
+        client.resolve_user_names(messages)
         return json.dumps(messages, ensure_ascii=False, indent=2)
     except SlackClientError as e:
         return f"[에러] {e.message}"
@@ -142,6 +143,7 @@ def fetch_thread(channel_id: str, thread_ts: str) -> str:
     try:
         client = _get_slack_client()
         messages = client.fetch_thread_replies(channel_id, thread_ts)
+        client.resolve_user_names(messages)
         return json.dumps(messages, ensure_ascii=False, indent=2)
     except SlackClientError as e:
         return f"[에러] {e.message}"
@@ -177,6 +179,7 @@ def fetch_threads(
         for thread_ts in thread_ts_list:
             try:
                 messages = client.fetch_thread_replies(channel_id, thread_ts)
+                client.resolve_user_names(messages)
                 threads.append({"thread_ts": thread_ts, "messages": messages})
             except SlackClientError as e:
                 threads.append({
@@ -255,6 +258,7 @@ def format_messages(
     try:
         client = _get_slack_client()
         messages = client.fetch_channel_messages(channel_id, limit, oldest)
+        client.resolve_user_names(messages)
         return format_messages_for_analysis(messages, channel_name)
     except SlackClientError as e:
         return f"[에러] {e.message}"

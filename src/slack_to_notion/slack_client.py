@@ -28,6 +28,7 @@ class SlackClient:
         """
         self.client = WebClient(token=token)
         self.token_type = token_type
+        self._user_cache: dict[str, str] = {}
         retry_handler = RateLimitErrorRetryHandler(max_retry_count=3)
         self.client.retry_handlers.append(retry_handler)
 
@@ -149,6 +150,55 @@ class SlackClient:
 
         except SlackApiError as e:
             raise SlackClientError(self._format_error_message(e)) from e
+
+    def get_user_name(self, user_id: str) -> str:
+        """사용자 ID를 표시 이름으로 변환.
+
+        캐시를 사용하여 동일 사용자에 대한 중복 API 호출을 방지한다.
+        변환 실패 시 원본 user_id를 반환한다.
+
+        Args:
+            user_id: Slack 사용자 ID (예: U0AF00FUC30)
+
+        Returns:
+            표시 이름. 실패 시 원본 user_id.
+        """
+        if user_id in self._user_cache:
+            return self._user_cache[user_id]
+
+        try:
+            response = self.client.users_info(user=user_id)
+            user = response["user"]
+            profile = user.get("profile", {})
+            name = (
+                profile.get("display_name")
+                or profile.get("real_name")
+                or user.get("real_name")
+                or user_id
+            )
+            self._user_cache[user_id] = name
+            return name
+        except SlackApiError:
+            self._user_cache[user_id] = user_id
+            return user_id
+
+    def resolve_user_names(self, messages: list[dict]) -> list[dict]:
+        """메시지 리스트의 user ID를 표시 이름으로 변환.
+
+        각 메시지에 user_name 필드를 추가한다.
+        원본 user 필드는 유지된다.
+
+        Args:
+            messages: Slack 메시지 리스트
+
+        Returns:
+            user_name 필드가 추가된 메시지 리스트
+        """
+        for msg in messages:
+            user_id = msg.get("user")
+            if user_id:
+                msg["user_name"] = self.get_user_name(user_id)
+        return messages
 
     def _format_error_message(self, error: SlackApiError) -> str:
         """API 에러를 사용자 친화적 메시지로 변환.
