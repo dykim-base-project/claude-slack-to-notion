@@ -45,15 +45,16 @@ class TestFormatMessagesForAnalysis:
         result = format_messages_for_analysis(messages, "general")
         assert "Channel: general" in result
         assert "Message count: 1" in result
-        assert "U001: 안녕하세요" in result
+        assert "U001" in result
+        assert "안녕하세요" in result
 
     def test_timestamp_conversion(self):
         messages = [
             {"ts": "1739612400.000000", "user": "U001", "text": "test"},
         ]
         result = format_messages_for_analysis(messages, "ch")
-        # 타임스탬프가 사람이 읽을 수 있는 형식으로 변환
-        assert "2025-02-15" in result or "2025-02-16" in result  # 시간대에 따라
+        # 타임스탬프가 M/D HH:MM 형식으로 변환됨
+        assert "2/15" in result or "2/16" in result  # 시간대에 따라
 
     def test_invalid_timestamp(self):
         messages = [
@@ -67,14 +68,14 @@ class TestFormatMessagesForAnalysis:
             {"ts": "1739612400.000000", "user": "U001", "text": "토론", "reply_count": 5},
         ]
         result = format_messages_for_analysis(messages, "ch")
-        assert "(replies: 5)" in result
+        assert "[스레드 - 답글 5개]" in result
 
     def test_no_reply_count(self):
         messages = [
             {"ts": "1739612400.000000", "user": "U001", "text": "일반"},
         ]
         result = format_messages_for_analysis(messages, "ch")
-        assert "replies" not in result
+        assert "스레드" not in result
 
     def test_empty_messages(self):
         result = format_messages_for_analysis([], "ch")
@@ -84,6 +85,15 @@ class TestFormatMessagesForAnalysis:
         messages = [{}]
         result = format_messages_for_analysis(messages, "ch")
         assert "Unknown" in result
+
+    def test_message_format_structure(self):
+        messages = [
+            {"ts": "1739612400.000000", "user": "U001", "text": "테스트 메시지"},
+        ]
+        result = format_messages_for_analysis(messages, "ch")
+        # "USER (M/D HH:MM) — 텍스트" 형식 확인
+        assert "U001 (" in result
+        assert ") \u2014 테스트 메시지" in result
 
 
 class TestFormatThreadsForAnalysis:
@@ -111,7 +121,8 @@ class TestFormatThreadsForAnalysis:
         assert "Total messages: 3" in result
         assert "Thread 1: 스레드 주제" in result
         assert "Thread 2: 다른 스레드" in result
-        assert "U002: 답글 1" in result
+        assert "U002" in result
+        assert "답글 1" in result
 
     def test_empty_threads(self):
         result = format_threads_for_analysis([], "ch")
@@ -133,7 +144,22 @@ class TestFormatThreadsForAnalysis:
             },
         ]
         result = format_threads_for_analysis(threads, "ch")
-        assert "2025-02-15" in result or "2025-02-16" in result
+        # M/D HH:MM 형식으로 변환됨
+        assert "2/15" in result or "2/16" in result
+
+    def test_thread_message_format_structure(self):
+        threads = [
+            {
+                "thread_ts": "1739612400.000000",
+                "messages": [
+                    {"ts": "1739612400.000000", "user": "U001", "text": "test"},
+                ],
+            },
+        ]
+        result = format_threads_for_analysis(threads, "ch")
+        # "USER (M/D HH:MM) — 텍스트" 형식 확인
+        assert "U001 (" in result
+        assert ") \u2014 test" in result
 
 
 class TestSaveAndLoadResult:

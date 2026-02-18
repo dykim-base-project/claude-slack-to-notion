@@ -16,6 +16,7 @@ ANALYSIS_GUIDE_EXAMPLES = [
     "주제별로 분류하고 각 주제의 핵심 내용을 요약해줘",
     "버그 리포트와 기능 요청을 분리해서 정리해줘",
     "타임라인 순서로 논의 흐름을 정리해줘",
+    "이 스레드에서 어떤 이슈가 발생했고 최종 방향은 무엇인지, 누가 누구에게 무엇을 지시했는지 정리해줘. 내가 할 일이나 알아야 할 내용이 있으면 따로 표시해줘",
 ]
 
 
@@ -35,6 +36,18 @@ def get_analysis_guide() -> str:
     return "\n".join(lines)
 
 
+def _format_timestamp(ts: str) -> str:
+    """Unix timestamp를 M/D HH:MM 형식으로 변환.
+
+    변환 실패 시 원본 ts 문자열을 반환한다.
+    """
+    try:
+        dt = datetime.fromtimestamp(float(ts))
+        return dt.strftime("%-m/%-d %H:%M")
+    except (ValueError, TypeError):
+        return ts
+
+
 def format_messages_for_analysis(messages: list[dict], channel_name: str) -> str:
     """Slack 메시지 리스트를 AI 분석용 텍스트로 변환."""
     context_lines = [
@@ -52,15 +65,11 @@ def format_messages_for_analysis(messages: list[dict], channel_name: str) -> str
         text = msg.get("text", "")
         reply_count = msg.get("reply_count", 0)
 
-        try:
-            dt = datetime.fromtimestamp(float(ts))
-            timestamp_str = dt.strftime("%Y-%m-%d %H:%M:%S")
-        except (ValueError, TypeError):
-            timestamp_str = ts
+        timestamp_str = _format_timestamp(ts)
 
-        msg_line = f"[{timestamp_str}] {user}: {text}"
+        msg_line = f"{user} ({timestamp_str}) \u2014 {text}"
         if reply_count > 0:
-            msg_line += f" (replies: {reply_count})"
+            msg_line += f"\n  [스레드 - 답글 {reply_count}개]"
 
         message_lines.append(msg_line)
 
@@ -100,13 +109,8 @@ def format_threads_for_analysis(
             user = msg.get("user", "Unknown")
             text = msg.get("text", "")
 
-            try:
-                dt = datetime.fromtimestamp(float(ts))
-                timestamp_str = dt.strftime("%Y-%m-%d %H:%M:%S")
-            except (ValueError, TypeError):
-                timestamp_str = ts
-
-            context_lines.append(f"[{timestamp_str}] {user}: {text}")
+            timestamp_str = _format_timestamp(ts)
+            context_lines.append(f"{user} ({timestamp_str}) \u2014 {text}")
 
         context_lines.append("")
 
