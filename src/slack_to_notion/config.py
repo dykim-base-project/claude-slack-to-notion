@@ -50,7 +50,7 @@ def load_config() -> dict:
         print("\n설정 방법:")
         print("  export SLACK_BOT_TOKEN=\"xoxb-...\"  # 봇 토큰 (권장)")
         print("  export SLACK_USER_TOKEN=\"xoxp-...\"  # 사용자 토큰 (대안)")
-        print("  export NOTION_API_KEY=\"secret_...\"")
+        print("  export NOTION_API_KEY=\"ntn_...\"  # 또는 secret_...")
         print("  export NOTION_PARENT_PAGE_ID=\"...\"")
         print("\n자세한 발급 방법은 README.md를 참고하세요.\n")
         raise SystemExit(1)
