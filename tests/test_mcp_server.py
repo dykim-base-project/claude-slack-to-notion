@@ -483,3 +483,39 @@ class TestMainHelp:
         with patch.object(sys, "argv", ["slack-to-notion-mcp", "-h"]):
             from slack_to_notion.mcp_server import main
             main()  # 예외 없으면 통과
+
+
+class TestFetchMessagesFieldFiltering:
+    """fetch_messages 반환 필드 검증."""
+
+    def test_only_allowed_fields_returned(self):
+        """불필요 필드(blocks, reactions 등)가 제거되는지 확인."""
+        import json
+        env = {"SLACK_BOT_TOKEN": "xoxb-fake"}
+        with patch.dict("os.environ", env, clear=False), \
+             patch("slack_to_notion.mcp_server._slack_client", None), \
+             patch("slack_to_notion.slack_client.WebClient") as mock_cls:
+            mock_api = mock_cls.return_value
+            mock_api.conversations_history.return_value = {
+                "messages": [{
+                    "ts": "1234567890.123456",
+                    "user": "U001",
+                    "text": "hello",
+                    "blocks": [{"type": "rich_text"}],
+                    "reactions": [{"name": "thumbsup"}],
+                    "reply_count": 3,
+                    "thread_ts": "1234567890.123456",
+                }]
+            }
+            mock_api.users_info.return_value = {
+                "user": {"profile": {"display_name": "kim", "real_name": ""}}
+            }
+
+            from slack_to_notion.mcp_server import fetch_messages
+            result = json.loads(fetch_messages("C001", limit=1))
+
+            msg = result[0]
+            allowed = {"ts", "user", "user_name", "text", "reply_count", "thread_ts"}
+            assert set(msg.keys()).issubset(allowed)
+            assert "blocks" not in msg
+            assert "reactions" not in msg
