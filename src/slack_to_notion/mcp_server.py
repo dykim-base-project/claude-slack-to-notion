@@ -418,6 +418,11 @@ def list_analysis_history(limit: int = 10) -> str:
         return f"[에러] 히스토리 조회 실패: {e!s}"
 
 
-if __name__ == "__main__":
+def main():
+    """MCP 서버 진입점. uvx 및 python -m 실행 시 호출된다."""
     logger.info("Slack-to-Notion MCP 서버 시작")
     mcp.run()
+
+
+if __name__ == "__main__":
+    main()
