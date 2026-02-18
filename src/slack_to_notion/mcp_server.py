@@ -294,7 +294,7 @@ def create_notion_page(
 
     Args:
         title: 페이지 제목 (예: "[general] 분석 결과 - 2024-01-15")
-        content: 분석 결과 텍스트 (마크다운 형식 지원: #, ##, ###, -, *)
+        content: 분석 결과 텍스트 (마크다운 형식 지원: #, ##, ###, -, *, **, `코드`, [링크](url), ~~취소선~~)
 
     Returns:
         생성된 Notion 페이지 URL 또는 에러 메시지
