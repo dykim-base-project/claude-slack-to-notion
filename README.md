@@ -121,7 +121,7 @@ Bot은 초대된 채널만 접근할 수 있습니다. 메시지를 수집할 �
 채널에 앱을 추가하지 않고, 본인 계정의 권한으로 메시지를 읽는 방식입니다.
 방식 A의 1~4단계까지 동일하게 Slack App을 생성한 뒤, 아래를 따르세요.
 
-1. **"OAuth & Permissions"** 에서 **"User Token Scopes"** 섹션에 다음 권한을 추가합니다:
+1. **"OAuth & Permissions"** 에서 아래로 스크롤하여 **"User Token Scopes"** 섹션에 다음 권한을 추가합니다:
 
 | 스코프 | 설명 |
 |--------|------|
@@ -130,8 +130,13 @@ Bot은 초대된 채널만 접근할 수 있습니다. 메시지를 수집할 �
 | `groups:history` | 비공개 채널의 메시지를 읽습니다 |
 | `users:read` | 메시지 작성자의 이름을 확인합니다 |
 
-2. **"Install to Workspace"** 클릭 → **"허용"** 클릭
-3. **"User OAuth Token"** 을 복사합니다. (`xoxp-`로 시작하는 문자열)
+2. 페이지 상단으로 스크롤하여 **"Install to Workspace"** 클릭 → **"허용"** 클릭
+
+> 이미 방식 A로 앱을 설치한 경우, **"Reinstall to Workspace"** 버튼이 표시됩니다. 클릭하여 재설치해야 User Token Scopes가 반영됩니다. 재설치 후에도 토큰이 보이지 않으면 페이지를 새로고침하거나 **"Reinstall to Workspace"** 를 한 번 더 클릭하세요.
+
+3. 설치(또는 재설치) 완료 후, 같은 **"OAuth & Permissions"** 페이지 상단의 **"OAuth Tokens for Your Workspace"** 섹션을 확인합니다. **"User OAuth Token"** 항목이 새로 표시됩니다. 복사 버튼을 눌러 토큰을 복사합니다. (`xoxp-`로 시작하는 문자열)
+
+> 방식 A를 먼저 설정한 경우, Bot User OAuth Token(`xoxb-`)과 User OAuth Token(`xoxp-`) 두 개가 함께 표시됩니다. **User OAuth Token** 을 복사하세요.
 
 > 사용자 토큰은 발급한 본인이 참여한 채널에만 접근할 수 있습니다. 본인이 워크스페이스를 떠나면 토큰이 무효화됩니다.
 
