@@ -420,6 +420,20 @@ def list_analysis_history(limit: int = 10) -> str:
 
 def main():
     """MCP 서버 진입점. uvx 및 python -m 실행 시 호출된다."""
+    if "--help" in sys.argv or "-h" in sys.argv:
+        print("slack-to-notion-mcp — Slack 메시지를 Notion 페이지로 정리하는 MCP 서버")
+        print()
+        print("사용법:")
+        print("  uvx slack-to-notion-mcp          MCP 서버 실행 (Claude Code가 자동 호출)")
+        print("  uvx slack-to-notion-mcp --help    이 도움말 표시")
+        print()
+        print("설치:")
+        print("  curl -sL https://raw.githubusercontent.com/dykim-base-project/")
+        print("    claude-slack-to-notion/main/scripts/setup.sh | bash")
+        print()
+        print("자세한 내용:")
+        print("  https://github.com/dykim-base-project/claude-slack-to-notion")
+        return
     logger.info("Slack-to-Notion MCP 서버 시작")
     mcp.run()
 
