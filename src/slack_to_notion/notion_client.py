@@ -49,16 +49,111 @@ class NotionClientError(Exception):
         super().__init__(self.message)
 
 
+def _parse_inline_markdown(text: str) -> list[dict]:
+    """인라인 마크다운을 Notion rich_text 세그먼트 리스트로 변환.
+
+    지원 문법 (단일 레벨, 중첩 미지원):
+        - [텍스트](url) → 링크
+        - **텍스트** → 볼드
+        - *텍스트* → 이탤릭 (단독, 볼드가 아닌 경우)
+        - `텍스트` → 인라인 코드
+        - ~~텍스트~~ → 취소선
+    """
+    # 볼드(**) 먼저 매칭하여 이탤릭(*)과 구분
+    pattern = re.compile(
+        r"(\[([^\]]+)\]\(([^)]+)\))"  # 링크: [text](url)
+        r"|(\*\*(.+?)\*\*)"           # 볼드: **text**
+        r"|(\*(.+?)\*)"               # 이탤릭: *text*
+        r"|(~~(.+?)~~)"               # 취소선: ~~text~~
+        r"|(`([^`]+?)`)"              # 인라인 코드: `text`
+    )
+
+    segments: list[dict] = []
+    last_end = 0
+
+    for m in pattern.finditer(text):
+        start = m.start()
+        # 매치 전 평문 추가
+        if start > last_end:
+            plain = text[last_end:start]
+            segments.append({"type": "text", "text": {"content": plain}})
+
+        if m.group(2) is not None:
+            # 링크
+            link_text = m.group(2)
+            link_url = m.group(3)
+            segments.append({
+                "type": "text",
+                "text": {"content": link_text, "link": {"url": link_url}},
+            })
+        elif m.group(5) is not None:
+            # 볼드
+            segments.append({
+                "type": "text",
+                "text": {"content": m.group(5)},
+                "annotations": {"bold": True},
+            })
+        elif m.group(7) is not None:
+            # 이탤릭
+            segments.append({
+                "type": "text",
+                "text": {"content": m.group(7)},
+                "annotations": {"italic": True},
+            })
+        elif m.group(9) is not None:
+            # 취소선
+            segments.append({
+                "type": "text",
+                "text": {"content": m.group(9)},
+                "annotations": {"strikethrough": True},
+            })
+        elif m.group(11) is not None:
+            # 인라인 코드
+            segments.append({
+                "type": "text",
+                "text": {"content": m.group(11)},
+                "annotations": {"code": True},
+            })
+
+        last_end = m.end()
+
+    # 나머지 평문 추가
+    if last_end < len(text):
+        segments.append({"type": "text", "text": {"content": text[last_end:]}})
+
+    return segments if segments else [{"type": "text", "text": {"content": text}}]
+
+
 def split_rich_text(text: str, max_len: int = 2000) -> list[dict]:
-    """텍스트를 Notion rich_text 세그먼트 리스트로 분할."""
+    """텍스트를 Notion rich_text 세그먼트 리스트로 분할.
+
+    인라인 마크다운(링크, 볼드, 이탤릭, 코드, 취소선)을 파싱하여
+    각 세그먼트에 적절한 annotations/link를 설정한다.
+    각 세그먼트의 content는 max_len(기본 2000자)을 초과하지 않도록 분할한다.
+    """
     if not text:
         return [{"type": "text", "text": {"content": " "}}]
 
-    chunks = []
-    for i in range(0, len(text), max_len):
-        chunk = text[i : i + max_len]
-        chunks.append({"type": "text", "text": {"content": chunk}})
-    return chunks
+    parsed = _parse_inline_markdown(text)
+
+    # 각 세그먼트의 content가 max_len을 초과하면 분할
+    result: list[dict] = []
+    for seg in parsed:
+        content = seg["text"]["content"]
+        if len(content) <= max_len:
+            result.append(seg)
+        else:
+            # 긴 세그먼트를 max_len 단위로 분할 (annotations/link 유지)
+            for i in range(0, len(content), max_len):
+                chunk = content[i : i + max_len]
+                new_seg: dict = {"type": "text", "text": {"content": chunk}}
+                if "link" in seg["text"]:
+                    new_seg["text"]["link"] = seg["text"]["link"]
+                if "annotations" in seg:
+                    new_seg["annotations"] = seg["annotations"]
+                result.append(new_seg)
+
+    return result
 
 
 class NotionClient:

@@ -71,6 +71,94 @@ class TestSplitRichText:
         assert len(result[1]["text"]["content"]) == 2000
         assert len(result[2]["text"]["content"]) == 1000
 
+    # ── 인라인 마크다운 파싱 테스트 ──
+
+    def test_link_parsing(self):
+        """[텍스트](url) → 링크 세그먼트로 변환."""
+        result = split_rich_text("[Notion](https://notion.so)")
+        assert len(result) == 1
+        seg = result[0]
+        assert seg["text"]["content"] == "Notion"
+        assert seg["text"]["link"]["url"] == "https://notion.so"
+
+    def test_bold_parsing(self):
+        """**텍스트** → 볼드 annotations 세그먼트로 변환."""
+        result = split_rich_text("**굵은 글씨**")
+        assert len(result) == 1
+        seg = result[0]
+        assert seg["text"]["content"] == "굵은 글씨"
+        assert seg["annotations"]["bold"] is True
+
+    def test_italic_parsing(self):
+        """*텍스트* → 이탤릭 annotations 세그먼트로 변환."""
+        result = split_rich_text("*기울임*")
+        assert len(result) == 1
+        seg = result[0]
+        assert seg["text"]["content"] == "기울임"
+        assert seg["annotations"]["italic"] is True
+
+    def test_inline_code_parsing(self):
+        """`텍스트` → 코드 annotations 세그먼트로 변환."""
+        result = split_rich_text("`코드`")
+        assert len(result) == 1
+        seg = result[0]
+        assert seg["text"]["content"] == "코드"
+        assert seg["annotations"]["code"] is True
+
+    def test_strikethrough_parsing(self):
+        """~~텍스트~~ → 취소선 annotations 세그먼트로 변환."""
+        result = split_rich_text("~~삭제~~")
+        assert len(result) == 1
+        seg = result[0]
+        assert seg["text"]["content"] == "삭제"
+        assert seg["annotations"]["strikethrough"] is True
+
+    def test_mixed_inline_markdown(self):
+        """같은 줄에 링크 + 볼드가 혼합된 경우."""
+        result = split_rich_text("참고: [링크](https://example.com)와 **중요** 내용")
+        assert len(result) == 5
+        # "참고: " 평문
+        assert result[0]["text"]["content"] == "참고: "
+        assert "annotations" not in result[0]
+        # 링크
+        assert result[1]["text"]["content"] == "링크"
+        assert result[1]["text"]["link"]["url"] == "https://example.com"
+        # "와 " 평문
+        assert result[2]["text"]["content"] == "와 "
+        # 볼드
+        assert result[3]["text"]["content"] == "중요"
+        assert result[3]["annotations"]["bold"] is True
+        # " 내용" 평문
+        assert result[4]["text"]["content"] == " 내용"
+
+    def test_plain_text_no_markdown(self):
+        """마크다운이 없는 일반 텍스트는 기존 동작 유지."""
+        result = split_rich_text("일반 텍스트입니다")
+        assert len(result) == 1
+        assert result[0]["text"]["content"] == "일반 텍스트입니다"
+        assert "annotations" not in result[0]
+        assert "link" not in result[0]["text"]
+
+    def test_bold_not_confused_with_italic(self):
+        """**볼드**와 *이탤릭*이 같은 줄에 있을 때 올바르게 구분."""
+        result = split_rich_text("**볼드** 그리고 *이탤릭*")
+        assert len(result) == 3
+        assert result[0]["annotations"]["bold"] is True
+        assert result[0]["text"]["content"] == "볼드"
+        assert result[1]["text"]["content"] == " 그리고 "
+        assert result[2]["annotations"]["italic"] is True
+        assert result[2]["text"]["content"] == "이탤릭"
+
+    def test_long_inline_content_splits(self):
+        """인라인 마크다운 세그먼트의 content가 max_len 초과 시 분할."""
+        long_text = "a" * 3000
+        result = split_rich_text(f"**{long_text}**", max_len=2000)
+        assert len(result) == 2
+        assert result[0]["annotations"]["bold"] is True
+        assert len(result[0]["text"]["content"]) == 2000
+        assert result[1]["annotations"]["bold"] is True
+        assert len(result[1]["text"]["content"]) == 1000
+
 
 # ──────────────────────────────────────────────
 # NotionClient

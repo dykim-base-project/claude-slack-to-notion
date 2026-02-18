@@ -23,7 +23,7 @@ class TestCreateNotionPage:
              patch("slack_to_notion.notion_client.Client") as mock_cls:
             mock_api = mock_cls.return_value
             mock_api.blocks.children.list.return_value = {"results": []}
-            mock_api.pages.create.return_value = {"url": "https://notion.so/created-page"}
+            mock_api.pages.create.return_value = {"id": "fake-page-id", "url": "https://notion.so/created-page"}
 
             from slack_to_notion.mcp_server import create_notion_page
             result = create_notion_page(title, content)
@@ -194,7 +194,7 @@ class TestCreateNotionPageBlockConversion:
              patch("slack_to_notion.notion_client.Client") as mock_cls:
             mock_api = mock_cls.return_value
             mock_api.blocks.children.list.return_value = {"results": []}
-            mock_api.pages.create.return_value = {"url": "https://notion.so/page"}
+            mock_api.pages.create.return_value = {"id": "fake-page-id", "url": "https://notion.so/page"}
 
             from slack_to_notion.mcp_server import create_notion_page
             create_notion_page("제목", "# 헤딩\n- 항목")
