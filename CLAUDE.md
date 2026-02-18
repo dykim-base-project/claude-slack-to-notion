@@ -120,3 +120,43 @@ main ────────────────●─────
 - claude-devex 플러그인 기반 이슈 사이클 워크플로우 사용
 - 플러그인 버전은 `.claude/.devex-version`으로 관리
 - 업데이트: `curl -sL https://raw.githubusercontent.com/idean3885/claude-devex/main/setup.sh | bash -s -- --update`
+
+### 배치 작업 효율화 규칙
+
+다중 이슈를 워크트리로 병렬 처리할 때 적용한다.
+
+#### 워크트리 환경 사전 준비
+
+에이전트 위임 **전에** 오케스트레이터가 워크트리 환경을 직접 준비한다:
+
+```bash
+cd {워크트리} && uv pip install pytest --quiet 2>&1 | tail -1
+```
+
+에이전트 프롬프트에 `pytest는 이미 설치되어 있습니다.` 를 명시하여 환경 문제 해결에 턴을 소비하지 않도록 한다.
+
+#### 세션 상태 파일
+
+3건 이상의 이슈를 배치 처리할 때 `.claude/session-state.md`를 작성하여 중단 시 상태를 복원한다:
+
+```markdown
+# 배치 작업 상태
+- 완료: #79 (PR #82 MERGED), #80 (PR #83 MERGED)
+- 진행중: #85 (커밋 완료, PR 대기)
+- 대기: #86, #91
+```
+
+- 각 이슈 Phase 전환 시 상태 파일 갱신
+- Stop hook 재개 시 이 파일을 먼저 읽어 상태 복원
+- 배치 완료 후 상태 파일 삭제
+
+#### 순차 머지 패턴
+
+병렬 작업 후 PR 머지는 반드시 순차 처리한다:
+
+```
+fetch → rebase → (충돌 시 해결) → force push → merge → 다음 PR
+```
+
+- `2>&1 || true` 패턴으로 Stop hook 중단 방지
+- 충돌 없는 PR은 연속 처리, 충돌 발생 시에만 수동 개입
