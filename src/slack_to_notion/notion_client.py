@@ -82,14 +82,25 @@ class NotionClient:
             return f"예상치 못한 오류가 발생했습니다 ({code}). 문제가 지속되면 README.md를 참고하세요."
 
     def check_duplicate(self, parent_page_id: str, title: str) -> bool:
-        """상위 페이지 하위에서 동일 제목의 페이지가 있는지 확인."""
+        """상위 페이지 하위에서 동일 제목의 페이지가 있는지 확인.
+
+        하위 페이지가 100개 초과인 경우에도 pagination으로 전체 조회한다.
+        """
         try:
-            blocks = self.client.blocks.children.list(block_id=parent_page_id)
-            for block in blocks.get("results", []):
-                if block["type"] == "child_page":
-                    page_title = block.get("child_page", {}).get("title", "")
-                    if page_title == title:
-                        return True
+            cursor = None
+            while True:
+                kwargs: dict = {"block_id": parent_page_id}
+                if cursor:
+                    kwargs["start_cursor"] = cursor
+                response = self.client.blocks.children.list(**kwargs)
+                for block in response.get("results", []):
+                    if block["type"] == "child_page":
+                        page_title = block.get("child_page", {}).get("title", "")
+                        if page_title == title:
+                            return True
+                if not response.get("has_more"):
+                    break
+                cursor = response.get("next_cursor")
             return False
         except APIResponseError as e:
             raise NotionClientError(self._format_error_message(e)) from e
@@ -100,8 +111,14 @@ class NotionClient:
         title: str,
         blocks: list[dict],
     ) -> str:
-        """상위 페이지 하위에 분석 결과 페이지를 생성."""
+        """상위 페이지 하위에 분석 결과 페이지를 생성.
+
+        Notion API는 children 배열 최대 100개 제한이 있으므로,
+        100개 초과 시 처음 100개로 페이지를 생성한 뒤 나머지를 100개씩 분할하여 append한다.
+        """
+        _BLOCK_LIMIT = 100
         try:
+            first_batch = blocks[:_BLOCK_LIMIT]
             response = self.client.pages.create(
                 parent={"page_id": parent_page_id},
                 properties={
@@ -109,8 +126,17 @@ class NotionClient:
                         "title": [{"type": "text", "text": {"content": title}}]
                     },
                 },
-                children=blocks,
+                children=first_batch,
             )
+            page_id = response["id"]
+            # 100개 초과분을 100개씩 분할하여 append
+            remaining = blocks[_BLOCK_LIMIT:]
+            for i in range(0, len(remaining), _BLOCK_LIMIT):
+                batch = remaining[i : i + _BLOCK_LIMIT]
+                self.client.blocks.children.append(
+                    block_id=page_id,
+                    children=batch,
+                )
             return response["url"]
         except APIResponseError as e:
             raise NotionClientError(self._format_error_message(e)) from e
