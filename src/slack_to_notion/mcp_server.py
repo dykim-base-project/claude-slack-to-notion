@@ -118,6 +118,7 @@ def fetch_messages(
     """
     try:
         client = _get_slack_client()
+        limit = max(1, min(limit, 1000))
         messages = client.fetch_channel_messages(channel_id, limit, oldest)
         return json.dumps(messages, ensure_ascii=False, indent=2)
     except SlackClientError as e:
