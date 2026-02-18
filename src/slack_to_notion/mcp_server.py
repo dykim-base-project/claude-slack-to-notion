@@ -123,7 +123,7 @@ def fetch_messages(
         messages = client.fetch_channel_messages(channel_id, limit, oldest)
         client.resolve_user_names(messages)
         filtered = [
-            {k: m[k] for k in ("ts", "user", "text", "reply_count", "thread_ts") if k in m}
+            {k: m[k] for k in ("ts", "user", "user_name", "text", "reply_count", "thread_ts") if k in m}
             for m in messages
         ]
         return json.dumps(filtered, ensure_ascii=False)
@@ -150,7 +150,7 @@ def fetch_thread(channel_id: str, thread_ts: str) -> str:
         messages = client.fetch_thread_replies(channel_id, thread_ts)
         client.resolve_user_names(messages)
         filtered = [
-            {k: m[k] for k in ("ts", "user", "text", "reply_count", "thread_ts") if k in m}
+            {k: m[k] for k in ("ts", "user", "user_name", "text", "reply_count", "thread_ts") if k in m}
             for m in messages
         ]
         return json.dumps(filtered, ensure_ascii=False)

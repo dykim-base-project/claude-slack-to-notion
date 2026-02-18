@@ -159,6 +159,36 @@ class TestSplitRichText:
         assert result[1]["annotations"]["bold"] is True
         assert len(result[1]["text"]["content"]) == 1000
 
+    def test_unclosed_bold(self):
+        result = split_rich_text("**열린 볼드")
+        assert len(result) == 1
+        assert result[0]["text"]["content"] == "**열린 볼드"
+
+    def test_empty_bold(self):
+        """****는 빈 볼드가 아닌 이탤릭(*) + 평문(*)으로 파싱됨."""
+        result = split_rich_text("****")
+        # 볼드(.+? 최소 1자)로 매칭 안 되고, 이탤릭으로 분해됨
+        assert len(result) == 2
+
+    def test_empty_inline_code(self):
+        result = split_rich_text("``")
+        assert len(result) == 1
+        assert result[0]["text"]["content"] == "``"
+
+    def test_url_with_query_params(self):
+        result = split_rich_text("[링크](https://example.com/path?q=a&b=c#hash)")
+        assert result[0]["text"]["link"]["url"] == "https://example.com/path?q=a&b=c#hash"
+
+    def test_consecutive_bold(self):
+        result = split_rich_text("**첫째** **둘째**")
+        bold_segments = [s for s in result if s.get("annotations", {}).get("bold")]
+        assert len(bold_segments) == 2
+
+    def test_bold_with_special_chars(self):
+        result = split_rich_text("**가격: $100**")
+        assert result[0]["text"]["content"] == "가격: $100"
+        assert result[0]["annotations"]["bold"] is True
+
 
 # ──────────────────────────────────────────────
 # NotionClient
@@ -483,6 +513,27 @@ class TestNotionClient:
         assert blocks[0]["type"] == "code"
         assert blocks[0]["code"]["language"] == "plain text"
         assert "some code" in blocks[0]["code"]["rich_text"][0]["text"]["content"]
+
+    def test_create_analysis_page_101_blocks(self):
+        self.mock_api.pages.create.return_value = {"id": "p", "url": "https://notion.so/p"}
+        blocks = [{"object": "block", "type": "paragraph", "paragraph": {"rich_text": []}} for _ in range(101)]
+        self.client.create_analysis_page("parent", "제목", blocks)
+        assert len(self.mock_api.pages.create.call_args[1]["children"]) == 100
+        assert self.mock_api.blocks.children.append.call_count == 1
+        assert len(self.mock_api.blocks.children.append.call_args[1]["children"]) == 1
+
+    def test_create_analysis_page_200_blocks(self):
+        self.mock_api.pages.create.return_value = {"id": "p", "url": "https://notion.so/p"}
+        blocks = [{"object": "block", "type": "paragraph", "paragraph": {"rich_text": []}} for _ in range(200)]
+        self.client.create_analysis_page("parent", "제목", blocks)
+        assert self.mock_api.blocks.children.append.call_count == 1
+        assert len(self.mock_api.blocks.children.append.call_args[1]["children"]) == 100
+
+    def test_create_analysis_page_zero_blocks(self):
+        self.mock_api.pages.create.return_value = {"id": "p", "url": "https://notion.so/p"}
+        self.client.create_analysis_page("parent", "제목", [])
+        assert self.mock_api.pages.create.call_args[1]["children"] == []
+        self.mock_api.blocks.children.append.assert_not_called()
 
 
 class TestNotionClientErrorFormatting:
