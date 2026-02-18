@@ -89,20 +89,25 @@ claude mcp add slack-to-notion \
 
 ### 설정 확인 및 수정
 
-설치 후 토큰이 저장되는 위치와 수정 방법입니다.
+**설치 확인:**
 
-| 항목 | 내용 |
-|------|------|
-| 설정 파일 | `~/.claude.json` |
-| 위치 | `mcpServers` → `slack-to-notion` → `env` |
+```bash
+claude mcp list
+```
 
-토큰을 수정하려면:
+**토큰 수정:**
 
-1. `~/.claude.json` 파일을 편집기(메모장, VS Code 등)로 열기
-2. `slack-to-notion` 항목의 `env` 섹션에서 토큰 값 수정
-3. 저장 후 Claude Code 재시작
+대화형 설치 스크립트를 다시 실행하면 기존 설정을 덮어씁니다.
 
-또는 대화형 설치 스크립트를 다시 실행하면 기존 설정을 덮어씁니다.
+```bash
+curl -sL https://raw.githubusercontent.com/dykim-base-project/claude-slack-to-notion/main/scripts/setup.sh | bash
+```
+
+**삭제:**
+
+```bash
+claude mcp remove slack-to-notion
+```
 
 ### API 토큰 설정
 
