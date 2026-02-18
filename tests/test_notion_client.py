@@ -262,6 +262,50 @@ class TestNotionClient:
         assert blocks[0]["type"] == "table"
         assert len(blocks[0]["table"]["children"]) == 2
 
+    # ── 에지 케이스 ──
+
+    def test_build_page_blocks_empty_string(self):
+        """빈 문자열 입력 시 빈 블록 리스트 반환."""
+        blocks = self.client.build_page_blocks("")
+        assert blocks == []
+
+    def test_build_page_blocks_unclosed_code_block(self):
+        """닫히지 않은 코드블록(``` 시작만 있고 끝 없음) — 코드 블록 하나 생성."""
+        content = "```python\nprint('hello')\ndef foo():\n    return 1"
+        blocks = self.client.build_page_blocks(content)
+        assert len(blocks) == 1
+        assert blocks[0]["type"] == "code"
+        assert blocks[0]["code"]["language"] == "python"
+        assert "print('hello')" in blocks[0]["code"]["rich_text"][0]["text"]["content"]
+
+    def test_build_page_blocks_table_unequal_column_counts(self):
+        """테이블 행마다 컬럼 수가 다른 경우 — 최대 너비로 패딩."""
+        # 헤더 3컬럼, 데이터 행 2컬럼
+        content = "| A | B | C |\n|---|---|---|\n| D | E |"
+        blocks = self.client.build_page_blocks(content)
+        assert len(blocks) == 1
+        block = blocks[0]
+        assert block["type"] == "table"
+        assert block["table"]["table_width"] == 3
+        data_row = block["table"]["children"][1]
+        # 짧은 행은 빈 셀로 패딩되어야 함
+        assert len(data_row["table_row"]["cells"]) == 3
+        assert data_row["table_row"]["cells"][2][0]["text"]["content"] == ""
+
+    def test_build_page_blocks_only_whitespace_lines(self):
+        """공백만 있는 라인은 모두 건너뜀 — 빈 블록 리스트 반환."""
+        blocks = self.client.build_page_blocks("   \n\n  \n")
+        assert blocks == []
+
+    def test_build_page_blocks_unclosed_code_block_no_language(self):
+        """언어 없이 닫히지 않은 코드블록 — 'plain text' 언어로 코드 블록 생성."""
+        content = "```\nsome code\nmore code"
+        blocks = self.client.build_page_blocks(content)
+        assert len(blocks) == 1
+        assert blocks[0]["type"] == "code"
+        assert blocks[0]["code"]["language"] == "plain text"
+        assert "some code" in blocks[0]["code"]["rich_text"][0]["text"]["content"]
+
 
 class TestNotionClientErrorFormatting:
     """에러 메시지 변환 테스트."""
