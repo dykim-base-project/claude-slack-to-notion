@@ -51,12 +51,24 @@ graph LR
 
 ### 설치
 
+플러그인 레포를 클론하고, 작업 디렉토리에서 플러그인을 로드하여 Claude Code를 실행합니다.
+
 ```bash
-# 로컬 클론 후 설치
+# 1. 별도 위치에 플러그인 클론 (작업 디렉토리와 분리)
+cd ~
 git clone https://github.com/dykim-base-project/claude-slack-to-notion.git
-claude --plugin-dir ./claude-slack-to-notion
+
+# 2. 환경변수 설정 (아래 "API 토큰 설정" 참고)
+cd ~/claude-slack-to-notion
+cp .env.example .env
+# .env 파일에 토큰 값 입력 후...
+
+# 3. 작업할 디렉토리에서 플러그인을 로드하여 실행
+cd ~/my-project
+claude --plugin-dir ~/claude-slack-to-notion
 ```
 
+> `--plugin-dir`은 **해당 세션에서만** 플러그인을 로드합니다. 매 실행 시 지정해야 합니다.
 > 최초 실행 시 Python 환경(venv)이 자동으로 설정됩니다.
 > 현재 **macOS/Linux**만 지원합니다.
 
@@ -176,13 +188,13 @@ Integration은 연결된 페이지만 접근할 수 있습니다. 분석 결과�
 
 #### 4단계: 환경변수 설정
 
-발급받은 3개 토큰을 환경변수로 설정합니다. 프로젝트 폴더에 `.env` 파일을 만드는 방법을 권장합니다.
+발급받은 3개 토큰을 환경변수로 설정합니다. **플러그인을 클론한 디렉토리**에 `.env` 파일을 만드는 방법을 권장합니다.
 
 **터미널에서 다음 명령어를 실행합니다:**
 
 ```bash
-# 프로젝트 폴더로 이동
-cd claude-slack-to-notion
+# 플러그인을 클론한 디렉토리로 이동
+cd ~/claude-slack-to-notion
 
 # .env.example 파일을 복사하여 .env 파일 생성
 cp .env.example .env
