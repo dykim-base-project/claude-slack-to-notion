@@ -194,7 +194,7 @@ except:
   fi
 
   print_step "uvx 캐시 갱신 중..."
-  uv cache clean slack-to-notion-mcp 2>/dev/null || true
+  uv cache clean slack-to-notion-mcp --force 2>/dev/null || true
   print_ok "uvx 캐시 갱신 완료"
 fi
 
