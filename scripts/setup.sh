@@ -61,6 +61,31 @@ if ! command -v uvx &> /dev/null; then
 fi
 print_ok "uvx 확인"
 
+# Python 버전 확인 (3.10 미만이면 경고)
+PYTHON_CMD=""
+if command -v python3 &> /dev/null; then
+  PYTHON_CMD="python3"
+elif command -v python &> /dev/null; then
+  PYTHON_CMD="python"
+fi
+
+PYTHON_TOO_OLD=false
+if [[ -n "$PYTHON_CMD" ]]; then
+  PYTHON_VERSION=$($PYTHON_CMD -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>/dev/null || echo "0.0")
+  PYTHON_MAJOR=$(echo "$PYTHON_VERSION" | cut -d. -f1)
+  PYTHON_MINOR=$(echo "$PYTHON_VERSION" | cut -d. -f2)
+  if [[ "$PYTHON_MAJOR" -lt 3 ]] || { [[ "$PYTHON_MAJOR" -eq 3 ]] && [[ "$PYTHON_MINOR" -lt 10 ]]; }; then
+    PYTHON_TOO_OLD=true
+    print_warn "시스템 Python ${PYTHON_VERSION}이 감지되었습니다. (필요 버전: 3.10 이상)"
+    echo "    uvx가 자동으로 Python 3.10을 사용하도록 설정합니다."
+  else
+    print_ok "Python ${PYTHON_VERSION} 확인"
+  fi
+else
+  print_warn "Python이 설치되어 있지 않습니다. uvx가 자동으로 Python 3.10을 사용합니다."
+  PYTHON_TOO_OLD=true
+fi
+
 # ============================================================
 # 기존 설치 감지
 # ============================================================
@@ -335,12 +360,21 @@ else
 fi
 echo ""
 
-claude mcp add slack-to-notion \
-  --transport stdio \
-  -e "${slack_env_name}=${slack_token}" \
-  -e "NOTION_API_KEY=${notion_api_key}" \
-  -e "NOTION_PARENT_PAGE_ID=${notion_page}" \
-  -- uvx slack-to-notion-mcp
+if [[ "$PYTHON_TOO_OLD" == "true" ]]; then
+  claude mcp add slack-to-notion \
+    --transport stdio \
+    -e "${slack_env_name}=${slack_token}" \
+    -e "NOTION_API_KEY=${notion_api_key}" \
+    -e "NOTION_PARENT_PAGE_ID=${notion_page}" \
+    -- uvx --python 3.10 slack-to-notion-mcp
+else
+  claude mcp add slack-to-notion \
+    --transport stdio \
+    -e "${slack_env_name}=${slack_token}" \
+    -e "NOTION_API_KEY=${notion_api_key}" \
+    -e "NOTION_PARENT_PAGE_ID=${notion_page}" \
+    -- uvx slack-to-notion-mcp
+fi
 
 # ============================================================
 # 완료 안내
