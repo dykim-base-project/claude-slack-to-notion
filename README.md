@@ -38,7 +38,7 @@ Claude Desktop 앱의 메뉴에서 **Settings** → **Developer** → **Edit Con
       "command": "uvx",
       "args": ["slack-to-notion-mcp"],
       "env": {
-        "SLACK_BOT_TOKEN": "xoxb-토큰값을-여기에-입력",
+        "SLACK_USER_TOKEN": "xoxp-토큰값을-여기에-입력",
         "NOTION_API_KEY": "secret_토큰값을-여기에-입력",
         "NOTION_PARENT_PAGE_ID": "https://www.notion.so/페이지-링크를-여기에-붙여넣기"
       }
@@ -47,7 +47,7 @@ Claude Desktop 앱의 메뉴에서 **Settings** → **Developer** → **Edit Con
 }
 ```
 
-> 토큰 발급이 처음이라면 [토큰 발급 가이드](docs/setup-guide.md#api-토큰-설정)를 참고하세요.
+> 팀에서 공유하려면 `SLACK_USER_TOKEN` 대신 `SLACK_BOT_TOKEN`(`xoxb-`)을 사용할 수 있습니다. 자세한 내용은 [토큰 발급 가이드](docs/setup-guide.md#api-토큰-설정)를 참고하세요.
 
 **3단계: Claude Desktop 재시작**
 
