@@ -194,12 +194,8 @@ except:
   fi
 
   print_step "uvx 캐시 갱신 중..."
-  if uvx --reinstall slack-to-notion-mcp --help &>/dev/null 2>&1; then
-    print_ok "uvx 캐시 갱신 완료 (--reinstall)"
-  else
-    uv cache clean slack-to-notion-mcp 2>/dev/null || true
-    print_ok "uvx 캐시 갱신 완료 (cache clean)"
-  fi
+  uv cache clean slack-to-notion-mcp 2>/dev/null || true
+  print_ok "uvx 캐시 갱신 완료"
 fi
 
 # ============================================================

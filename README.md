@@ -75,10 +75,14 @@ curl -sL https://raw.githubusercontent.com/dykim-base-project/claude-slack-to-no
 이미 설치된 경우 동일한 명령으로 업데이트할 수 있습니다:
 
 ```bash
+# 방법 1: setup.sh (토큰 자동 재사용)
 curl -sL https://raw.githubusercontent.com/dykim-base-project/claude-slack-to-notion/main/scripts/setup.sh | bash
+
+# 방법 2: uvx 직접 실행 (캐시 초기화 후 최신 버전)
+uv cache clean slack-to-notion-mcp && uvx slack-to-notion-mcp@latest --help
 ```
 
-기존 설치가 감지되면 자동으로 업데이트 모드로 전환됩니다.
+setup.sh는 기존 설치를 감지하면 자동으로 업데이트 모드로 전환됩니다.
 기존 토큰은 자동으로 재사용되므로 토큰을 다시 입력하지 않아도 됩니다.
 
 #### 방법 3: 수동 등록 (고급)
