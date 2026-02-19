@@ -1,0 +1,47 @@
+name: Auto Tag
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "pyproject.toml"
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # PAT 사용: GITHUB_TOKEN으로 생성한 태그는 다른 워크플로우를 트리거하지 않음.
+          # PAT(Personal Access Token)로 체크아웃하면 해당 토큰으로 태그가 push되어
+          # pypi-publish.yml의 on.push.tags 트리거가 정상 동작함.
+          token: ${{ secrets.PAT_TOKEN }}
+
+      - name: pyproject.toml에서 버전 읽기
+        id: version
+        run: |
+          VERSION=$(grep -m1 '^version' pyproject.toml | sed 's/.*= *"\(.*\)"/\1/')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: 태그 중복 확인
+        id: check
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          if git ls-remote --tags origin "$TAG" | grep -q "$TAG"; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "태그 $TAG 가 이미 존재합니다. 스킵합니다."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "태그 $TAG 를 생성합니다."
+          fi
+
+      - name: 태그 생성 및 push
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "$TAG"
+          git push origin "$TAG"
