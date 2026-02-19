@@ -87,103 +87,83 @@ if [[ "$IS_UPDATE" == "true" ]]; then
   existing_notion_api_key=""
   existing_notion_page=""
 
-  # .mcp.json 위치 탐색 (전역 또는 로컬)
-  MCP_JSON_PATHS=(
-    "$HOME/.claude/claude_desktop_config.json"
-    "$HOME/.config/claude/claude_desktop_config.json"
-    "$HOME/Library/Application Support/Claude/claude_desktop_config.json"
-    ".mcp.json"
-  )
-
-  for mcp_path in "${MCP_JSON_PATHS[@]}"; do
-    if [[ -f "$mcp_path" ]]; then
-      # SLACK_BOT_TOKEN 추출
-      token=$(python3 -c "
+  # Claude Code CLI 설정 파일에서 토큰 추출
+  # .claude.json: projects > {경로} > mcpServers > slack-to-notion > env
+  if [[ -f "$HOME/.claude.json" ]]; then
+    token_data=$(python3 -c "
 import json, sys
 try:
     with open(sys.argv[1]) as f:
         data = json.load(f)
-    servers = data.get('mcpServers', data.get('mcp', {}).get('servers', {}))
-    server = servers.get('slack-to-notion', {})
-    env = server.get('env', {})
-    print(env.get('SLACK_BOT_TOKEN', env.get('SLACK_USER_TOKEN', '')))
+    # Claude Code CLI: projects > {path} > mcpServers 탐색
+    for proj in data.get('projects', {}).values():
+        servers = proj.get('mcpServers', {})
+        if isinstance(servers, dict) and 'slack-to-notion' in servers:
+            env = servers['slack-to-notion'].get('env', {})
+            slack = env.get('SLACK_BOT_TOKEN', env.get('SLACK_USER_TOKEN', ''))
+            notion = env.get('NOTION_API_KEY', '')
+            page = env.get('NOTION_PARENT_PAGE_ID', '')
+            print(f'{slack}\n{notion}\n{page}')
+            sys.exit(0)
+    print('\n\n')
 except:
-    print('')
-" "$mcp_path" 2>/dev/null || echo "")
-      if [[ -n "$token" ]]; then
-        existing_slack_token="$token"
-        if [[ "$token" == xoxb-* ]]; then
-          existing_slack_env_name="SLACK_BOT_TOKEN"
-        else
-          existing_slack_env_name="SLACK_USER_TOKEN"
-        fi
-      fi
+    print('\n\n')
+" "$HOME/.claude.json" 2>/dev/null || echo -e "\n\n")
 
-      # NOTION_API_KEY 추출
-      notion_key=$(python3 -c "
-import json, sys
-try:
-    with open(sys.argv[1]) as f:
-        data = json.load(f)
-    servers = data.get('mcpServers', data.get('mcp', {}).get('servers', {}))
-    server = servers.get('slack-to-notion', {})
-    env = server.get('env', {})
-    print(env.get('NOTION_API_KEY', ''))
-except:
-    print('')
-" "$mcp_path" 2>/dev/null || echo "")
-      if [[ -n "$notion_key" ]]; then
-        existing_notion_api_key="$notion_key"
-      fi
+    existing_slack_token=$(echo "$token_data" | sed -n '1p')
+    existing_notion_api_key=$(echo "$token_data" | sed -n '2p')
+    existing_notion_page=$(echo "$token_data" | sed -n '3p')
 
-      # NOTION_PARENT_PAGE_ID 추출
-      notion_pg=$(python3 -c "
-import json, sys
-try:
-    with open(sys.argv[1]) as f:
-        data = json.load(f)
-    servers = data.get('mcpServers', data.get('mcp', {}).get('servers', {}))
-    server = servers.get('slack-to-notion', {})
-    env = server.get('env', {})
-    print(env.get('NOTION_PARENT_PAGE_ID', ''))
-except:
-    print('')
-" "$mcp_path" 2>/dev/null || echo "")
-      if [[ -n "$notion_pg" ]]; then
-        existing_notion_page="$notion_pg"
+    if [[ -n "$existing_slack_token" ]]; then
+      if [[ "$existing_slack_token" == xoxb-* ]]; then
+        existing_slack_env_name="SLACK_BOT_TOKEN"
+      else
+        existing_slack_env_name="SLACK_USER_TOKEN"
       fi
-
-      break
     fi
-  done
+  fi
 
-  # claude mcp list --json 으로도 시도 (claude mcp list가 JSON을 지원하는 경우)
+  # 폴백: Claude Desktop / .mcp.json 설정 파일 탐색
   if [[ -z "$existing_slack_token" ]]; then
-    mcp_json_output=$(claude mcp list --format json 2>/dev/null || echo "")
-    if [[ -n "$mcp_json_output" ]]; then
-      token=$(python3 -c "
+    MCP_JSON_PATHS=(
+      "$HOME/.claude/claude_desktop_config.json"
+      "$HOME/.config/claude/claude_desktop_config.json"
+      "$HOME/Library/Application Support/Claude/claude_desktop_config.json"
+      ".mcp.json"
+    )
+
+    for mcp_path in "${MCP_JSON_PATHS[@]}"; do
+      if [[ -f "$mcp_path" ]]; then
+        token_data=$(python3 -c "
 import json, sys
 try:
-    data = json.loads('''$mcp_json_output''')
-    if isinstance(data, list):
-        for item in data:
-            if item.get('name') == 'slack-to-notion':
-                env = item.get('env', {})
-                print(env.get('SLACK_BOT_TOKEN', env.get('SLACK_USER_TOKEN', '')))
-                break
-    print('')
+    with open(sys.argv[1]) as f:
+        data = json.load(f)
+    servers = data.get('mcpServers', data.get('mcp', {}).get('servers', {}))
+    server = servers.get('slack-to-notion', {})
+    env = server.get('env', {})
+    slack = env.get('SLACK_BOT_TOKEN', env.get('SLACK_USER_TOKEN', ''))
+    notion = env.get('NOTION_API_KEY', '')
+    page = env.get('NOTION_PARENT_PAGE_ID', '')
+    print(f'{slack}\n{notion}\n{page}')
 except:
-    print('')
-" 2>/dev/null || echo "")
-      if [[ -n "$token" ]]; then
-        existing_slack_token="$token"
-        if [[ "$token" == xoxb-* ]]; then
-          existing_slack_env_name="SLACK_BOT_TOKEN"
-        else
-          existing_slack_env_name="SLACK_USER_TOKEN"
+    print('\n\n')
+" "$mcp_path" 2>/dev/null || echo -e "\n\n")
+
+        existing_slack_token=$(echo "$token_data" | sed -n '1p')
+        existing_notion_api_key=$(echo "$token_data" | sed -n '2p')
+        existing_notion_page=$(echo "$token_data" | sed -n '3p')
+
+        if [[ -n "$existing_slack_token" ]]; then
+          if [[ "$existing_slack_token" == xoxb-* ]]; then
+            existing_slack_env_name="SLACK_BOT_TOKEN"
+          else
+            existing_slack_env_name="SLACK_USER_TOKEN"
+          fi
+          break
         fi
       fi
-    fi
+    done
   fi
 
   print_step "기존 플러그인 제거 중..."
