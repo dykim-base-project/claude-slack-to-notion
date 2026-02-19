@@ -16,7 +16,7 @@ jobs:
           # PAT 사용: GITHUB_TOKEN으로 생성한 태그는 다른 워크플로우를 트리거하지 않음.
           # PAT(Personal Access Token)로 체크아웃하면 해당 토큰으로 태그가 push되어
           # pypi-publish.yml의 on.push.tags 트리거가 정상 동작함.
-          token: ${{ secrets.PAT_TOKEN }}
+          token: ${{ secrets.AUTO_TAG_PAT }}
 
       - name: pyproject.toml에서 버전 읽기
         id: version
