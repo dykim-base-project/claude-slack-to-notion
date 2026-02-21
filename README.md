@@ -61,7 +61,7 @@ Claude Desktop 앱을 사용하고 있다면 아래 순서대로 진행하세요
   "mcpServers": {
     "slack-to-notion": {
       "command": "여기에-uvx-경로-붙여넣기",
-      "args": ["slack-to-notion-mcp"],
+      "args": ["--refresh", "slack-to-notion-mcp"],
       "env": {
         "SLACK_USER_TOKEN": "xoxp-토큰값을-여기에-입력",
         "NOTION_API_KEY": "토큰값을-여기에-입력",
@@ -79,7 +79,7 @@ Claude Desktop 앱을 사용하고 있다면 아래 순서대로 진행하세요
   "mcpServers": {
     "slack-to-notion": {
       "command": "/Users/hong/.local/bin/uvx",
-      "args": ["slack-to-notion-mcp"],
+      "args": ["--refresh", "slack-to-notion-mcp"],
       "env": {
         "SLACK_USER_TOKEN": "xoxp-1234-5678-abcd",
         "NOTION_API_KEY": "ntn_또는secret_로시작하는토큰",
