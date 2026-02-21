@@ -214,8 +214,8 @@ class SlackClient:
 
         if error_code in ("invalid_auth", "not_authed"):
             if is_user_token:
-                return "Slack 토큰이 올바르지 않습니다. .env 파일의 SLACK_USER_TOKEN을 확인하세요."
-            return "Slack 토큰이 올바르지 않습니다. .env 파일의 SLACK_BOT_TOKEN을 확인하세요."
+                return "Slack 토큰이 올바르지 않습니다. SLACK_USER_TOKEN 값을 확인하세요. 토큰은 xoxp-로 시작해야 합니다."
+            return "Slack 토큰이 올바르지 않습니다. SLACK_BOT_TOKEN 값을 확인하세요. 토큰은 xoxb-로 시작해야 합니다."
 
         if error_code in ("channel_not_found", "not_in_channel"):
             if is_user_token:

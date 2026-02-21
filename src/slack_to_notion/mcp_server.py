@@ -53,7 +53,8 @@ def _get_slack_client() -> SlackClient:
         if not token:
             raise RuntimeError(
                 "SLACK_BOT_TOKEN 또는 SLACK_USER_TOKEN 환경변수가 설정되지 않았습니다. "
-                ".mcp.json 파일의 env 섹션을 확인하세요."
+                "Claude Desktop: 설정 파일(claude_desktop_config.json)의 env 섹션을 확인하세요. "
+                "Claude Code CLI: claude mcp add 명령의 -e 옵션을 확인하세요."
             )
         # 접두사로 토큰 타입 판별
         token_type = "user" if token.startswith("xoxp-") else "bot"
@@ -70,7 +71,8 @@ def _get_notion_client() -> NotionClient:
         if not api_key:
             raise RuntimeError(
                 "NOTION_API_KEY 환경변수가 설정되지 않았습니다. "
-                ".mcp.json 파일의 env 섹션을 확인하세요."
+                "Claude Desktop: 설정 파일(claude_desktop_config.json)의 env 섹션을 확인하세요. "
+                "Claude Code CLI: claude mcp add 명령의 -e 옵션을 확인하세요."
             )
         _notion_client = NotionClient(api_key)
         logger.info("NotionClient 초기화 완료")
