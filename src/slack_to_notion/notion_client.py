@@ -166,7 +166,7 @@ class NotionClient:
         """APIResponseError를 사용자 친화적 한글 메시지로 변환."""
         code = error.code
         if code in ("unauthorized", "invalid_api_key"):
-            return "Notion API 키가 올바르지 않습니다. .env 파일의 NOTION_API_KEY를 확인하세요."
+            return "Notion API 키가 올바르지 않습니다. NOTION_API_KEY 값을 확인하세요. 토큰은 ntn_ 또는 secret_로 시작해야 합니다."
         elif code == "object_not_found":
             return "Notion 페이지를 찾을 수 없습니다. Integration이 해당 페이지에 연결되어 있는지 확인하세요."
         elif code == "restricted_resource":
