@@ -31,18 +31,30 @@ claude mcp add slack-to-notion \
 
 ### 업데이트
 
-이미 설치된 경우 동일한 명령으로 업데이트할 수 있습니다:
+**Claude Code CLI:**
 
 ```bash
-# 방법 1: setup.sh (토큰 자동 재사용)
+# 방법 1: setup.sh (토큰 자동 재사용, 권장)
 curl -sL https://raw.githubusercontent.com/dykim-base-project/claude-slack-to-notion/main/scripts/setup.sh | bash
 
-# 방법 2: uvx 직접 실행 (캐시 초기화 후 최신 버전)
-uv cache clean slack-to-notion-mcp && uvx slack-to-notion-mcp@latest --help
+# 방법 2: 수동 (영구 설치 제거 + 캐시 정리)
+uv tool uninstall slack-to-notion-mcp 2>/dev/null; uv cache clean slack-to-notion-mcp --force
 ```
 
 setup.sh는 기존 설치를 감지하면 자동으로 업데이트 모드로 전환됩니다.
 기존 토큰은 자동으로 재사용되므로 토큰을 다시 입력하지 않아도 됩니다.
+
+**Claude Desktop:**
+
+Claude Desktop을 **완전히 종료**한 뒤 터미널에서 아래 명령어를 실행하세요:
+
+```bash
+uv tool uninstall slack-to-notion-mcp 2>/dev/null; uv cache clean slack-to-notion-mcp --force
+```
+
+이후 Claude Desktop을 다시 실행하면 최신 버전이 자동으로 다운로드됩니다.
+
+> `uv tool uninstall`이 핵심입니다. `uv tool install`로 영구 설치된 환경이 있으면 `uvx`가 PyPI 최신 버전을 무시합니다.
 
 ### 설정 확인 및 수정
 
