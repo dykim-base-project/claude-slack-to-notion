@@ -22,7 +22,7 @@ curl -sL https://raw.githubusercontent.com/dykim-base-project/claude-slack-to-no
 claude mcp add slack-to-notion \
   --transport stdio \
   -e SLACK_USER_TOKEN=xoxp-your-token \
-  -e NOTION_API_KEY=secret_your-key \
+  -e NOTION_API_KEY=ntn_your-key \
   -e NOTION_PARENT_PAGE_ID=https://notion.so/your-page \
   -- uvx slack-to-notion-mcp
 ```
@@ -193,7 +193,7 @@ Integration은 연결된 페이지만 접근할 수 있습니다. 분석 결과�
 claude mcp add slack-to-notion \
   --transport stdio \
   -e SLACK_USER_TOKEN=xoxp-1234-5678-abcdefgh \
-  -e NOTION_API_KEY=secret_abc123def456... \
+  -e NOTION_API_KEY=ntn_abc123def456... \
   -e NOTION_PARENT_PAGE_ID=https://www.notion.so/abc123def456...?source=copy_link \
   -- uvx slack-to-notion-mcp
 ```
@@ -216,7 +216,7 @@ SLACK_USER_TOKEN=xoxp-1234-5678-abcdefgh                                        
 # 방식 B를 선택한 경우 (Bot 토큰) — 둘 중 하나만 설정
 # SLACK_BOT_TOKEN=xoxb-1234-5678-abcdefgh                                        ← 1단계에서 복사한 값
 
-NOTION_API_KEY=secret_abc123def456...                                              ← 2단계에서 복사한 값
+NOTION_API_KEY=ntn_abc123def456...                                                 ← 2단계에서 복사한 값
 NOTION_PARENT_PAGE_ID=https://www.notion.so/abc123def456...?source=copy_link       ← 3단계에서 복사한 링크
 ```
 

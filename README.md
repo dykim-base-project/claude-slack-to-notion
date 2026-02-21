@@ -64,7 +64,7 @@ Claude Desktop 앱을 사용하고 있다면 아래 순서대로 진행하세요
       "args": ["slack-to-notion-mcp"],
       "env": {
         "SLACK_USER_TOKEN": "xoxp-토큰값을-여기에-입력",
-        "NOTION_API_KEY": "secret_토큰값을-여기에-입력",
+        "NOTION_API_KEY": "토큰값을-여기에-입력",
         "NOTION_PARENT_PAGE_ID": "https://www.notion.so/페이지-링크를-여기에-붙여넣기"
       }
     }
@@ -82,7 +82,7 @@ Claude Desktop 앱을 사용하고 있다면 아래 순서대로 진행하세요
       "args": ["slack-to-notion-mcp"],
       "env": {
         "SLACK_USER_TOKEN": "xoxp-1234-5678-abcd",
-        "NOTION_API_KEY": "secret_abc123",
+        "NOTION_API_KEY": "ntn_또는secret_로시작하는토큰",
         "NOTION_PARENT_PAGE_ID": "https://www.notion.so/My-Page-abc123"
       }
     }
