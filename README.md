@@ -19,23 +19,48 @@ graph LR
 
 ### Claude Desktop 앱 (일반 사용자)
 
-Claude Desktop 앱을 사용하고 있다면 설정 파일에 아래 내용을 추가하면 됩니다.
+Claude Desktop 앱을 사용하고 있다면 아래 순서대로 진행하세요.
 
-**1단계: 설정 파일 열기**
+**1단계: uv 설치 (처음 한 번만)**
 
-Claude Desktop 앱의 메뉴에서 **Settings** → **Developer** → **Edit Config** 를 클릭합니다.
+이 플러그인은 [uv](https://docs.astral.sh/uv/)라는 도구가 필요합니다. 이미 설치했다면 2단계로 넘어가세요.
 
-<!-- TODO: Claude Desktop Settings > Developer > Edit Config 스크린샷 추가 -->
+1. **터미널**을 엽니다 (Spotlight에서 "터미널" 검색, 또는 `응용 프로그램 > 유틸리티 > 터미널`)
+2. 아래 명령어를 복사해서 터미널에 붙여넣고 Enter를 누릅니다:
+   ```
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   ```
+3. 설치가 끝나면 터미널을 **닫았다가 다시 엽니다**
+4. 아래 명령어를 붙여넣고 Enter를 누릅니다. 출력된 경로를 **복사**해두세요:
+   ```
+   which uvx
+   ```
+   `/Users/사용자이름/.local/bin/uvx` 같은 경로가 나옵니다. 이 경로를 2단계에서 사용합니다.
 
-**2단계: 설정 붙여넣기**
+> `which uvx`에서 아무것도 나오지 않으면 터미널을 닫고 다시 열어보세요.
+> 그래도 안 되면 `$HOME/.local/bin/uvx` 경로를 직접 사용하세요.
 
-열린 파일에 아래 내용을 복사해서 붙여넣고, `토큰값을-여기에-입력` 부분을 실제 토큰으로 교체합니다:
+**2단계: 설정 파일 열기**
+
+1. Claude Desktop 앱 좌측 상단의 **계정 아이콘**을 클릭합니다
+2. **설정**을 클릭합니다 (단축키: `⌘ + ,`)
+3. 왼쪽 메뉴 하단 **데스크톱 앱** 섹션에서 **개발자**를 클릭합니다
+4. **구성 편집**을 클릭하면 Finder에서 설정 파일(`claude_desktop_config.json`)이 열립니다
+5. 이 파일을 **텍스트 편집기**로 엽니다 (파일을 우클릭 → 다음으로 열기 → 텍스트 편집기)
+
+**3단계: 설정 붙여넣기**
+
+파일의 기존 내용을 **전부 지우고** 아래 내용을 붙여넣습니다.
+두 군데를 수정하세요:
+
+- `여기에-uvx-경로-붙여넣기` → 1단계에서 복사한 uvx 경로로 교체
+- `토큰값을-여기에-입력` → 실제 토큰으로 교체 ([토큰 발급 가이드](docs/setup-guide.md#api-토큰-설정))
 
 ```json
 {
   "mcpServers": {
     "slack-to-notion": {
-      "command": "uvx",
+      "command": "여기에-uvx-경로-붙여넣기",
       "args": ["slack-to-notion-mcp"],
       "env": {
         "SLACK_USER_TOKEN": "xoxp-토큰값을-여기에-입력",
@@ -47,20 +72,34 @@ Claude Desktop 앱의 메뉴에서 **Settings** → **Developer** → **Edit Con
 }
 ```
 
-> 팀에서 공유하려면 `SLACK_USER_TOKEN` 대신 `SLACK_BOT_TOKEN`(`xoxb-`)을 사용할 수 있습니다. 자세한 내용은 [토큰 발급 가이드](docs/setup-guide.md#api-토큰-설정)를 참고하세요.
+예시 (uvx 경로가 `/Users/hong/.local/bin/uvx`인 경우):
 
-**3단계: Claude Desktop 재시작**
+```json
+{
+  "mcpServers": {
+    "slack-to-notion": {
+      "command": "/Users/hong/.local/bin/uvx",
+      "args": ["slack-to-notion-mcp"],
+      "env": {
+        "SLACK_USER_TOKEN": "xoxp-1234-5678-abcd",
+        "NOTION_API_KEY": "secret_abc123",
+        "NOTION_PARENT_PAGE_ID": "https://www.notion.so/My-Page-abc123"
+      }
+    }
+  }
+}
+```
 
-파일을 저장하고 Claude Desktop을 완전히 종료한 뒤 다시 실행합니다.
-입력창 우측 하단에 도구 아이콘이 나타나면 설치 완료입니다.
+> 팀에서 공유하려면 `SLACK_USER_TOKEN` 대신 `SLACK_BOT_TOKEN`(`xoxb-`)을 사용할 수 있습니다.
+> 자세한 내용은 [토큰 발급 가이드](docs/setup-guide.md#api-토큰-설정)를 참고하세요.
 
-<!-- TODO: Claude Desktop 도구 아이콘 표시 스크린샷 추가 -->
+**4단계: Claude Desktop 재시작**
 
-> **uvx가 없다는 에러가 나오나요?** uv를 먼저 설치해야 합니다. 터미널(Spotlight에서 "터미널" 검색)을 열고 아래를 붙여넣으세요:
-> ```
-> curl -LsSf https://astral.sh/uv/install.sh | sh
-> ```
-> 설치 후 Claude Desktop을 재시작하면 됩니다.
+파일을 저장(`⌘ + S`)하고 Claude Desktop을 **완전히 종료**(Dock에서 우클릭 → 종료)한 뒤 다시 실행합니다.
+
+정상 연결 시: 입력창 우측 하단에 도구 아이콘(🔧)이 나타납니다.
+
+> 재시작해도 오류가 나오면 [문제 해결 가이드](docs/troubleshooting.md)를 확인하세요.
 
 ### Claude Code CLI (개발자)
 
