@@ -172,7 +172,7 @@ class NotionClient:
         elif code == "restricted_resource":
             return "해당 Notion 페이지에 접근 권한이 없습니다. Integration 연결을 확인하세요."
         elif code == "validation_error":
-            return "Notion 요청이 올바르지 않습니다. NOTION_PARENT_PAGE_ID가 유효한 페이지 ID인지 확인하세요."
+            return "Notion 요청이 올바르지 않습니다. NOTION_PARENT_PAGE_URL이 유효한 페이지 링크인지 확인하세요."
         else:
             return f"예상치 못한 오류가 발생했습니다 ({code}). 문제가 지속되면 README.md를 참고하세요."
 
