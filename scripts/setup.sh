@@ -198,9 +198,14 @@ except:
     print_warn "기존 플러그인 제거 건너뜀 (이미 제거되었거나 접근 불가)"
   fi
 
-  print_step "uvx 캐시 갱신 중..."
+  print_step "기존 환경 정리 중..."
+  # 영구 설치(uv tool install)가 있으면 제거 — uvx 버전 갱신을 차단하는 원인
+  if uv tool list 2>/dev/null | grep -q "slack-to-notion-mcp"; then
+    uv tool uninstall slack-to-notion-mcp 2>/dev/null || true
+    print_ok "기존 영구 설치 제거 완료"
+  fi
   uv cache clean slack-to-notion-mcp --force 2>/dev/null || true
-  print_ok "uvx 캐시 갱신 완료"
+  print_ok "캐시 정리 완료"
 fi
 
 # ============================================================

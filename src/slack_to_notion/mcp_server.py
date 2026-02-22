@@ -58,8 +58,13 @@ def _get_slack_client() -> SlackClient:
             )
         # 접두사로 토큰 타입 판별
         token_type = "user" if token.startswith("xoxp-") else "bot"
+        # 토큰 접두사 로깅 (디버깅용, 값 노출 방지)
+        token_prefix = token[:10] if len(token) > 10 else token[:4]
+        logger.info(
+            "SlackClient 초기화 (token_type=%s, prefix=%s..., len=%d)",
+            token_type, token_prefix, len(token),
+        )
         _slack_client = SlackClient(token, token_type)
-        logger.info("SlackClient 초기화 완료 (token_type=%s)", token_type)
     return _slack_client
 
 
@@ -74,8 +79,9 @@ def _get_notion_client() -> NotionClient:
                 "Claude Desktop: 설정 파일(claude_desktop_config.json)의 env 섹션을 확인하세요. "
                 "Claude Code CLI: claude mcp add 명령의 -e 옵션을 확인하세요."
             )
+        key_prefix = api_key[:10] if len(api_key) > 10 else api_key[:4]
+        logger.info("NotionClient 초기화 (prefix=%s..., len=%d)", key_prefix, len(api_key))
         _notion_client = NotionClient(api_key)
-        logger.info("NotionClient 초기화 완료")
     return _notion_client
 
 
@@ -432,6 +438,15 @@ def list_analysis_history(limit: int = 10) -> str:
         return f"[에러] 히스토리 조회 실패: {e!s}"
 
 
+def _get_package_version() -> str:
+    """패키지 버전을 반환한다."""
+    try:
+        from importlib.metadata import version
+        return version("slack-to-notion-mcp")
+    except Exception:
+        return "unknown"
+
+
 def main():
     """MCP 서버 진입점. uvx 및 python -m 실행 시 호출된다."""
     if "--help" in sys.argv or "-h" in sys.argv:
@@ -448,7 +463,8 @@ def main():
         print("자세한 내용:")
         print("  https://github.com/dykim-base-project/claude-slack-to-notion")
         return
-    logger.info("Slack-to-Notion MCP 서버 시작")
+    pkg_version = _get_package_version()
+    logger.info("Slack-to-Notion MCP 서버 시작 (v%s)", pkg_version)
     mcp.run()
 
 

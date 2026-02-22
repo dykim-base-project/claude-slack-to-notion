@@ -7,7 +7,8 @@
 | 설치 후 첫 실행에서 플러그인이 인식되지 않음 | Claude Code CLI 캐시 이슈 | `/exit`으로 종료 후 `claude`를 다시 실행 |
 | `spawn uvx ENOENT` (Claude Desktop) | Claude Desktop이 uvx 경로를 찾지 못함 | 아래 [Claude Desktop에서 uvx를 찾지 못하는 경우](#claude-desktop에서-uvx를-찾지-못하는-경우) 참고 |
 | `uvx: command not found` (터미널) | uv 미설치 | `curl -LsSf https://astral.sh/uv/install.sh \| sh` 실행 후 터미널 재시작 |
-| `No module named slack_to_notion` | 패키지 설치 안 됨 | `uv cache clean slack-to-notion-mcp && uvx slack-to-notion-mcp@latest --help` |
+| `No module named slack_to_notion` | 패키지 설치 안 됨 | `uv cache clean slack-to-notion-mcp --force && uvx slack-to-notion-mcp --help` |
+| 업데이트 후에도 구버전이 실행됨 | `uv tool install`로 영구 설치된 환경이 `uvx`를 차단 | 아래 [버전이 올라가지 않는 경우](#버전이-올라가지-않는-경우) 참고 |
 | `SLACK_BOT_TOKEN 또는 SLACK_USER_TOKEN 환경변수가 설정되지 않았습니다` | 환경변수 미설정 | [설치 가이드](setup-guide.md#4단계-환경변수-설정) 참고 |
 | `not_in_channel` 에러 (Bot 토큰) | Bot이 채널에 초대되지 않음 | 채널 설정 → Integrations → Add apps에서 Bot 추가 |
 | `not_in_channel` 에러 (사용자 토큰) | 해당 채널에 참여하지 않음 | Slack에서 채널에 참여한 뒤 다시 시도 |
@@ -35,6 +36,33 @@ Claude Desktop은 일반 앱이라 터미널의 PATH 설정(`~/.zshrc` 등)을 �
 
 > `which uvx`에서 아무것도 나오지 않으면 uv가 설치되지 않은 것입니다.
 > `curl -LsSf https://astral.sh/uv/install.sh | sh` 로 설치한 뒤 터미널을 재시작하세요.
+
+## 버전이 올라가지 않는 경우
+
+`uvx --refresh`를 사용해도 구버전이 계속 실행되는 경우, `uv tool install`로 생성된 영구 설치가 원인입니다.
+
+**확인 방법:**
+
+```
+uv tool list
+```
+
+`slack-to-notion-mcp`가 목록에 있으면 영구 설치가 존재하는 것입니다.
+
+**해결 방법:**
+
+```bash
+# 1. 영구 설치 제거
+uv tool uninstall slack-to-notion-mcp
+
+# 2. 캐시도 정리
+uv cache clean slack-to-notion-mcp --force
+
+# 3. 확인 (최신 버전이 표시되어야 함)
+uvx slack-to-notion-mcp --help
+```
+
+> Claude Desktop 사용자: 위 명령 실행 후 Claude Desktop을 재시작하세요.
 
 ## 제약사항
 
