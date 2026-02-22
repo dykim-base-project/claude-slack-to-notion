@@ -23,7 +23,7 @@ claude mcp add slack-to-notion \
   --transport stdio \
   -e SLACK_USER_TOKEN=xoxp-your-token \
   -e NOTION_API_KEY=ntn_your-key \
-  -e NOTION_PARENT_PAGE_ID=https://notion.so/your-page \
+  -e NOTION_PARENT_PAGE_URL=https://notion.so/your-page \
   -- uvx slack-to-notion-mcp
 ```
 
@@ -88,7 +88,7 @@ claude mcp remove slack-to-notion
 | `SLACK_USER_TOKEN` | Slack 채널 메시지 읽기 (권장) | `xoxp-`로 시작 |
 | `SLACK_BOT_TOKEN` | Slack 채널 메시지 읽기 (팀 공유 시) | `xoxb-`로 시작 |
 | `NOTION_API_KEY` | Notion 페이지 생성 | `ntn_` 또는 `secret_`로 시작 |
-| `NOTION_PARENT_PAGE_ID` | 분석 결과가 저장될 Notion 페이지 | 페이지 링크 또는 32자 ID |
+| `NOTION_PARENT_PAGE_URL` | 분석 결과가 저장될 Notion 페이지 | 페이지 링크 또는 32자 ID |
 
 > `SLACK_USER_TOKEN`과 `SLACK_BOT_TOKEN` 중 **하나만 설정**하면 됩니다. 둘 다 설정하면 Bot 토큰이 사용됩니다.
 
@@ -206,11 +206,11 @@ claude mcp add slack-to-notion \
   --transport stdio \
   -e SLACK_USER_TOKEN=xoxp-1234-5678-abcdefgh \
   -e NOTION_API_KEY=ntn_abc123def456... \
-  -e NOTION_PARENT_PAGE_ID=https://www.notion.so/abc123def456...?source=copy_link \
+  -e NOTION_PARENT_PAGE_URL=https://www.notion.so/abc123def456...?source=copy_link \
   -- uvx slack-to-notion-mcp
 ```
 
-> `NOTION_PARENT_PAGE_ID`에는 Notion 페이지 URL을 그대로 붙여넣으면 됩니다. Page ID가 자동으로 추출됩니다.
+> `NOTION_PARENT_PAGE_URL`에는 Notion 페이지 URL을 그대로 붙여넣으면 됩니다. Page ID가 자동으로 추출됩니다.
 
 **로컬 개발 환경의 경우:**
 
@@ -229,7 +229,7 @@ SLACK_USER_TOKEN=xoxp-1234-5678-abcdefgh                                        
 # SLACK_BOT_TOKEN=xoxb-1234-5678-abcdefgh                                        ← 1단계에서 복사한 값
 
 NOTION_API_KEY=ntn_abc123def456...                                                 ← 2단계에서 복사한 값
-NOTION_PARENT_PAGE_ID=https://www.notion.so/abc123def456...?source=copy_link       ← 3단계에서 복사한 링크
+NOTION_PARENT_PAGE_URL=https://www.notion.so/abc123def456...?source=copy_link       ← 3단계에서 복사한 링크
 ```
 
 > `.env` 파일에는 토큰이 포함되어 있으므로 Git에 업로드되지 않도록 `.gitignore`에 이미 등록되어 있습니다.

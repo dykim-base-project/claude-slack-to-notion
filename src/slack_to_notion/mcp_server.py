@@ -309,9 +309,11 @@ def create_notion_page(
     """
     try:
         client = _get_notion_client()
-        raw_page_id = os.environ.get("NOTION_PARENT_PAGE_ID")
+        raw_page_id = os.environ.get(
+            "NOTION_PARENT_PAGE_URL", os.environ.get("NOTION_PARENT_PAGE_ID")
+        )
         if not raw_page_id:
-            return "[에러] NOTION_PARENT_PAGE_ID 환경변수가 설정되지 않았습니다."
+            return "[에러] NOTION_PARENT_PAGE_URL 환경변수가 설정되지 않았습니다. Notion 페이지 링크를 입력하세요."
         parent_page_id = extract_page_id(raw_page_id)
 
         # 중복 체크

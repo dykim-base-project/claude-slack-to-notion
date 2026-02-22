@@ -127,7 +127,7 @@ try:
             env = servers['slack-to-notion'].get('env', {})
             slack = env.get('SLACK_BOT_TOKEN', env.get('SLACK_USER_TOKEN', ''))
             notion = env.get('NOTION_API_KEY', '')
-            page = env.get('NOTION_PARENT_PAGE_ID', '')
+            page = env.get('NOTION_PARENT_PAGE_URL', '')
             print(f'{slack}\n{notion}\n{page}')
             sys.exit(0)
     print('\n\n')
@@ -169,7 +169,7 @@ try:
     env = server.get('env', {})
     slack = env.get('SLACK_BOT_TOKEN', env.get('SLACK_USER_TOKEN', ''))
     notion = env.get('NOTION_API_KEY', '')
-    page = env.get('NOTION_PARENT_PAGE_ID', '')
+    page = env.get('NOTION_PARENT_PAGE_URL', '')
     print(f'{slack}\n{notion}\n{page}')
 except:
     print('\n\n')
@@ -370,14 +370,14 @@ if [[ "$PYTHON_TOO_OLD" == "true" ]]; then
     --transport stdio \
     -e "${slack_env_name}=${slack_token}" \
     -e "NOTION_API_KEY=${notion_api_key}" \
-    -e "NOTION_PARENT_PAGE_ID=${notion_page}" \
+    -e "NOTION_PARENT_PAGE_URL=${notion_page}" \
     -- uvx --python 3.10 slack-to-notion-mcp
 else
   claude mcp add slack-to-notion \
     --transport stdio \
     -e "${slack_env_name}=${slack_token}" \
     -e "NOTION_API_KEY=${notion_api_key}" \
-    -e "NOTION_PARENT_PAGE_ID=${notion_page}" \
+    -e "NOTION_PARENT_PAGE_URL=${notion_page}" \
     -- uvx slack-to-notion-mcp
 fi
 

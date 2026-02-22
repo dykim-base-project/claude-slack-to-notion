@@ -13,7 +13,7 @@ class TestCreateNotionPage:
         """create_notion_page를 환경변수와 mock으로 호출."""
         env = {
             "NOTION_API_KEY": "fake-key",
-            "NOTION_PARENT_PAGE_ID": "https://www.notion.so/abc123def456abc123def456abc123de?source=copy_link",
+            "NOTION_PARENT_PAGE_URL": "https://www.notion.so/abc123def456abc123def456abc123de?source=copy_link",
         }
         if env_vars:
             env.update(env_vars)
@@ -37,7 +37,7 @@ class TestCreateNotionPage:
     def test_duplicate_detection(self):
         env = {
             "NOTION_API_KEY": "fake-key",
-            "NOTION_PARENT_PAGE_ID": "abc123def456abc123def456abc123de",
+            "NOTION_PARENT_PAGE_URL": "abc123def456abc123def456abc123de",
         }
         with patch.dict("os.environ", env, clear=False), \
              patch("slack_to_notion.mcp_server._notion_client", None), \
@@ -58,7 +58,7 @@ class TestCreateNotionPage:
              patch("slack_to_notion.mcp_server._notion_client", None):
             from slack_to_notion.mcp_server import create_notion_page
             result = create_notion_page("제목", "내용")
-            assert "NOTION_PARENT_PAGE_ID" in result
+            assert "NOTION_PARENT_PAGE_URL" in result
             assert "에러" in result
 
 
@@ -187,7 +187,7 @@ class TestCreateNotionPageBlockConversion:
     def test_blocks_passed_to_api(self):
         env = {
             "NOTION_API_KEY": "fake-key",
-            "NOTION_PARENT_PAGE_ID": "abc123def456abc123def456abc123de",
+            "NOTION_PARENT_PAGE_URL": "abc123def456abc123def456abc123de",
         }
         with patch.dict("os.environ", env, clear=False), \
              patch("slack_to_notion.mcp_server._notion_client", None), \
@@ -421,7 +421,7 @@ class TestCreateNotionPageErrors:
 
         env = {
             "NOTION_API_KEY": "fake-key",
-            "NOTION_PARENT_PAGE_ID": "abc123def456abc123def456abc123de",
+            "NOTION_PARENT_PAGE_URL": "abc123def456abc123def456abc123de",
         }
         with patch.dict("os.environ", env, clear=False), \
              patch("slack_to_notion.mcp_server._notion_client", None), \
@@ -439,7 +439,7 @@ class TestCreateNotionPageErrors:
 
         env = {
             "NOTION_API_KEY": "fake-key",
-            "NOTION_PARENT_PAGE_ID": "abc123def456abc123def456abc123de",
+            "NOTION_PARENT_PAGE_URL": "abc123def456abc123def456abc123de",
         }
         with patch.dict("os.environ", env, clear=False), \
              patch("slack_to_notion.mcp_server._notion_client", None), \
@@ -456,7 +456,7 @@ class TestCreateNotionPageErrors:
         """예상치 못한 예외 발생 시 에러 메시지 반환."""
         env = {
             "NOTION_API_KEY": "fake-key",
-            "NOTION_PARENT_PAGE_ID": "abc123def456abc123def456abc123de",
+            "NOTION_PARENT_PAGE_URL": "abc123def456abc123def456abc123de",
         }
         with patch.dict("os.environ", env, clear=False), \
              patch("slack_to_notion.mcp_server._notion_client", None), \
