@@ -11,6 +11,7 @@ claude-slack-to-notion이 Claude Code에 제공하는 MCP 도구 목록입니다
 | `fetch_messages` | 특정 채널의 메시지 조회 |
 | `fetch_thread` | 특정 스레드의 전체 메시지 조회 |
 | `fetch_threads` | 여러 스레드를 한 번에 수집하고 AI 분석용으로 포맷팅 |
+| `check_active_users` | 워크스페이스에서 현재 활성(온라인) 사용자 조회 |
 | `fetch_channel_info` | 채널 상세 정보 조회 |
 
 ## 분석

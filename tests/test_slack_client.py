@@ -263,6 +263,124 @@ class TestGetUserName:
         assert self.mock_api.users_info.call_count == 1
 
 
+class TestListUsers:
+    """사용자 목록 조회 테스트."""
+
+    def setup_method(self):
+        with patch("slack_to_notion.slack_client.WebClient"):
+            self.client = SlackClient("xoxb-fake-token")
+            self.mock_api = self.client.client
+
+    def test_list_users_success(self):
+        self.mock_api.users_list.return_value = {
+            "members": [
+                {"id": "U001", "real_name": "Kim", "profile": {"display_name": "김동영", "real_name": "Kim"}},
+                {"id": "U002", "real_name": "Lee", "profile": {"display_name": "이철수", "real_name": "Lee"}},
+            ],
+            "response_metadata": {"next_cursor": ""},
+        }
+        users = self.client.list_users()
+        assert len(users) == 2
+        assert users[0]["id"] == "U001"
+        assert users[0]["name"] == "김동영"
+
+    def test_list_users_excludes_bots(self):
+        self.mock_api.users_list.return_value = {
+            "members": [
+                {"id": "U001", "real_name": "Kim", "is_bot": False, "profile": {"display_name": "김동영"}},
+                {"id": "U002", "real_name": "Bot", "is_bot": True, "profile": {"display_name": "봇"}},
+                {"id": "USLACKBOT", "real_name": "Slackbot", "profile": {"display_name": "Slackbot"}},
+                {"id": "U003", "real_name": "Del", "deleted": True, "profile": {"display_name": "삭제됨"}},
+            ],
+            "response_metadata": {"next_cursor": ""},
+        }
+        users = self.client.list_users()
+        assert len(users) == 1
+        assert users[0]["id"] == "U001"
+
+    def test_list_users_caches_names(self):
+        self.mock_api.users_list.return_value = {
+            "members": [
+                {"id": "U001", "real_name": "Kim", "profile": {"display_name": "김동영"}},
+            ],
+            "response_metadata": {"next_cursor": ""},
+        }
+        self.client.list_users()
+        assert self.client._user_cache["U001"] == "김동영"
+
+
+class TestGetUserPresence:
+    """사용자 온라인 상태 조회 테스트."""
+
+    def setup_method(self):
+        with patch("slack_to_notion.slack_client.WebClient"):
+            self.client = SlackClient("xoxb-fake-token")
+            self.mock_api = self.client.client
+
+    def test_active_presence(self):
+        self.mock_api.users_getPresence.return_value = {"ok": True, "presence": "active"}
+        assert self.client.get_user_presence("U001") == "active"
+
+    def test_away_presence(self):
+        self.mock_api.users_getPresence.return_value = {"ok": True, "presence": "away"}
+        assert self.client.get_user_presence("U001") == "away"
+
+    def test_api_error_raises(self):
+        self.mock_api.users_getPresence.side_effect = _make_slack_error("user_not_found")
+        with pytest.raises(SlackClientError):
+            self.client.get_user_presence("U999")
+
+
+class TestGetActiveUsers:
+    """활성 사용자 조회 테스트."""
+
+    def setup_method(self):
+        with patch("slack_to_notion.slack_client.WebClient"):
+            self.client = SlackClient("xoxb-fake-token")
+            self.mock_api = self.client.client
+
+    def test_returns_only_active_users(self):
+        self.mock_api.users_list.return_value = {
+            "members": [
+                {"id": "U001", "real_name": "Kim", "profile": {"display_name": "김동영"}},
+                {"id": "U002", "real_name": "Lee", "profile": {"display_name": "이철수"}},
+                {"id": "U003", "real_name": "Park", "profile": {"display_name": "박영희"}},
+            ],
+            "response_metadata": {"next_cursor": ""},
+        }
+
+        def presence_side_effect(user):
+            statuses = {"U001": "active", "U002": "away", "U003": "active"}
+            return {"ok": True, "presence": statuses.get(user, "away")}
+
+        self.mock_api.users_getPresence.side_effect = presence_side_effect
+        active = self.client.get_active_users()
+        assert len(active) == 2
+        assert active[0]["name"] == "김동영"
+        assert active[1]["name"] == "박영희"
+        assert all(u["presence"] == "active" for u in active)
+
+    def test_skips_presence_errors(self):
+        """개별 사용자 presence 조회 실패 시 건너뛴다."""
+        self.mock_api.users_list.return_value = {
+            "members": [
+                {"id": "U001", "real_name": "Kim", "profile": {"display_name": "김동영"}},
+                {"id": "U002", "real_name": "Lee", "profile": {"display_name": "이철수"}},
+            ],
+            "response_metadata": {"next_cursor": ""},
+        }
+
+        def presence_side_effect(user):
+            if user == "U001":
+                return {"ok": True, "presence": "active"}
+            raise _make_slack_error("user_not_found")
+
+        self.mock_api.users_getPresence.side_effect = presence_side_effect
+        active = self.client.get_active_users()
+        assert len(active) == 1
+        assert active[0]["id"] == "U001"
+
+
 class TestResolveUserNames:
     """메시지 리스트 사용자 이름 변환 테스트."""
 

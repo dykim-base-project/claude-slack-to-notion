@@ -214,6 +214,27 @@ def fetch_threads(
 
 
 @mcp.tool()
+def check_active_users() -> str:
+    """워크스페이스에서 현재 활성(온라인) 상태인 사용자 목록을 조회한다.
+
+    전체 사용자 중 현재 Slack에 접속하여 활동 중인 사용자만 반환한다.
+
+    Returns:
+        활성 사용자 리스트를 JSON 형식 문자열로 반환
+        [{"id": "U123", "name": "홍길동", "real_name": "홍길동", "presence": "active"}]
+    """
+    try:
+        client = _get_slack_client()
+        active_users = client.get_active_users()
+        return json.dumps(active_users, ensure_ascii=False)
+    except SlackClientError as e:
+        return f"[에러] {e.message}"
+    except Exception as e:
+        logger.exception("예상치 못한 에러 발생")
+        return f"[에러] 활성 사용자 조회 실패: {e!s}"
+
+
+@mcp.tool()
 def fetch_channel_info(channel_id: str) -> str:
     """Slack 채널의 상세 정보를 조회한다.
 
