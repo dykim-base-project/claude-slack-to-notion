@@ -182,6 +182,94 @@ class SlackClient:
             self._user_cache[user_id] = user_id
             return user_id
 
+    def list_users(self) -> list[dict]:
+        """워크스페이스 전체 사용자 목록 조회.
+
+        봇과 삭제된 사용자는 제외한다.
+
+        Returns:
+            사용자 정보 리스트 [{"id", "name", "real_name"}]
+
+        Raises:
+            SlackClientError: API 호출 실패 시
+        """
+        try:
+            users = []
+            cursor = None
+
+            while True:
+                response = self.client.users_list(cursor=cursor, limit=200)
+
+                for user in response["members"]:
+                    if user.get("is_bot") or user.get("deleted") or user.get("id") == "USLACKBOT":
+                        continue
+                    profile = user.get("profile", {})
+                    name = (
+                        profile.get("display_name")
+                        or profile.get("real_name")
+                        or user.get("real_name")
+                        or user.get("id")
+                    )
+                    users.append({
+                        "id": user["id"],
+                        "name": name,
+                        "real_name": user.get("real_name", ""),
+                    })
+                    self._user_cache[user["id"]] = name
+
+                cursor = response.get("response_metadata", {}).get("next_cursor")
+                if not cursor:
+                    break
+
+            return users
+
+        except SlackApiError as e:
+            raise SlackClientError(self._format_error_message(e)) from e
+
+    def get_user_presence(self, user_id: str) -> str:
+        """사용자 온라인 상태 조회.
+
+        Args:
+            user_id: Slack 사용자 ID
+
+        Returns:
+            "active" 또는 "away"
+
+        Raises:
+            SlackClientError: API 호출 실패 시
+        """
+        try:
+            response = self.client.users_getPresence(user=user_id)
+            return response.get("presence", "away")
+        except SlackApiError as e:
+            raise SlackClientError(self._format_error_message(e)) from e
+
+    def get_active_users(self) -> list[dict]:
+        """현재 활성 상태인 사용자 목록 조회.
+
+        워크스페이스 전체 사용자를 조회한 뒤, 각 사용자의
+        온라인 상태를 확인하여 활성(active) 사용자만 반환한다.
+
+        Returns:
+            활성 사용자 리스트 [{"id", "name", "real_name", "presence"}]
+
+        Raises:
+            SlackClientError: API 호출 실패 시
+        """
+        users = self.list_users()
+        active_users = []
+
+        for user in users:
+            try:
+                presence = self.get_user_presence(user["id"])
+                if presence == "active":
+                    user["presence"] = presence
+                    active_users.append(user)
+            except SlackClientError:
+                continue
+
+        return active_users
+
     def resolve_user_names(self, messages: list[dict]) -> list[dict]:
         """메시지 리스트의 user ID를 표시 이름으로 변환.
 
