@@ -160,3 +160,19 @@ fetch → rebase → (충돌 시 해결) → force push → merge → 다음 PR
 
 - `2>&1 || true` 패턴으로 Stop hook 중단 방지
 - 충돌 없는 PR은 연속 처리, 충돌 발생 시에만 수동 개입
+
+### 버전 관리 (PyPI 배포)
+
+이 레포는 MCP 서버 패키지(`slack-to-notion-mcp`)를 PyPI로 배포한다. 버전 파이프라인:
+
+```
+pyproject.toml version 변경 → auto-tag.yml (태그 생성) → pypi-publish.yml (PyPI 배포)
+```
+
+**규칙: `src/` 하위 파일을 변경하는 PR에는 반드시 `pyproject.toml`의 patch 버전을 올린다.**
+
+- `feat`: minor 또는 patch 증가 (기능 규모에 따라 판단)
+- `fix`, `refactor`, `docs`(코드 내 docstring 등): patch 증가
+- `docs`(README 등 코드 외 문서만), `chore`: 버전 변경 불필요
+
+버전을 올리지 않으면 auto-tag가 트리거되지 않아 PyPI에 배포되지 않고, Claude Desktop 사용자에게 변경사항이 전달되지 않는다.
