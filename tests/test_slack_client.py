@@ -52,7 +52,7 @@ class TestSlackClientListChannels:
     """채널 목록 조회 테스트."""
 
     def setup_method(self):
-        with patch("slack_to_notion.slack_client.WebClient") as mock_cls:
+        with patch("slack_to_notion.slack_client.WebClient"):
             self.client = SlackClient("xoxb-fake-token")
             self.mock_api = self.client.client
 
@@ -332,7 +332,7 @@ class TestGetUserPresence:
 
 
 class TestGetActiveUsers:
-    """활성 사용자 조회 테스트."""
+    """로그인한 사용자 조회 테스트."""
 
     def setup_method(self):
         with patch("slack_to_notion.slack_client.WebClient"):
@@ -420,3 +420,70 @@ class TestResolveUserNames:
         assert result[2]["user_name"] == "김동영"
         # U001은 캐시되어 1번만 호출
         assert self.mock_api.users_info.call_count == 2
+
+
+class TestResolveMentionsInText:
+    """메시지 텍스트 내 멘션 치환 테스트."""
+
+    def setup_method(self):
+        with patch("slack_to_notion.slack_client.WebClient"):
+            self.client = SlackClient("xoxb-fake-token")
+            self.mock_api = self.client.client
+
+    def test_single_mention_replaced(self):
+        """<@U001> → @김동영 치환."""
+        self.mock_api.users_info.return_value = {
+            "user": {"profile": {"display_name": "김동영", "real_name": ""}}
+        }
+        result = self.client._resolve_mentions("안녕 <@U001>님")
+        assert result == "안녕 @김동영님"
+
+    def test_multiple_mentions_replaced(self):
+        """여러 멘션 각각 치환."""
+        def users_info_side_effect(user):
+            names = {"U001": "김동영", "U002": "이철수"}
+            return {"user": {"profile": {"display_name": names.get(user, ""), "real_name": ""}}}
+
+        self.mock_api.users_info.side_effect = users_info_side_effect
+        result = self.client._resolve_mentions("<@U001>과 <@U002>에게 전달")
+        assert result == "@김동영과 @이철수에게 전달"
+
+    def test_unknown_user_falls_back_to_id(self):
+        """API 실패 시 @U999로 폴백."""
+        self.mock_api.users_info.side_effect = _make_slack_error("user_not_found")
+        result = self.client._resolve_mentions("확인 부탁 <@U999>")
+        assert result == "확인 부탁 @U999"
+
+    def test_no_mentions_unchanged(self):
+        """멘션 없으면 원본 유지, API 미호출."""
+        result = self.client._resolve_mentions("멘션 없는 메시지")
+        assert result == "멘션 없는 메시지"
+        self.mock_api.users_info.assert_not_called()
+
+    def test_duplicate_mention_uses_cache(self):
+        """동일 사용자 반복 시 API 1회만 호출."""
+        self.mock_api.users_info.return_value = {
+            "user": {"profile": {"display_name": "김동영", "real_name": ""}}
+        }
+        result = self.client._resolve_mentions("<@U001> said to <@U001>")
+        assert result == "@김동영 said to @김동영"
+        assert self.mock_api.users_info.call_count == 1
+
+    def test_resolve_user_names_sets_resolved_text(self):
+        """resolve_user_names가 resolved_text 필드를 추가하고 원본 text를 보존."""
+        self.mock_api.users_info.return_value = {
+            "user": {"profile": {"display_name": "김동영", "real_name": ""}}
+        }
+        messages = [{"user": "U001", "text": "확인 <@U001>"}]
+        result = self.client.resolve_user_names(messages)
+        assert result[0]["resolved_text"] == "확인 @김동영"
+        assert result[0]["text"] == "확인 <@U001>"  # 원본 보존
+
+    def test_resolve_user_names_no_text(self):
+        """text 없으면 resolved_text 미추가."""
+        self.mock_api.users_info.return_value = {
+            "user": {"profile": {"display_name": "김동영", "real_name": ""}}
+        }
+        messages = [{"user": "U001"}]
+        result = self.client.resolve_user_names(messages)
+        assert "resolved_text" not in result[0]

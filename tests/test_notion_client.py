@@ -6,7 +6,6 @@ import pytest
 
 from slack_to_notion.notion_client import (
     NotionClient,
-    NotionClientError,
     extract_page_id,
     split_rich_text,
 )
@@ -347,27 +346,19 @@ class TestNotionClient:
         assert result is False
         assert self.mock_api.blocks.children.list.call_count == 2
 
-    def test_build_page_blocks_heading1(self):
-        blocks = self.client.build_page_blocks("# 제목")
+    @pytest.mark.parametrize("markdown,expected_type", [
+        ("# 제목", "heading_1"),
+        ("## 소제목", "heading_2"),
+        ("### 하위제목", "heading_3"),
+    ])
+    def test_build_page_blocks_headings(self, markdown, expected_type):
+        blocks = self.client.build_page_blocks(markdown)
         assert len(blocks) == 1
-        assert blocks[0]["type"] == "heading_1"
+        assert blocks[0]["type"] == expected_type
 
-    def test_build_page_blocks_heading2(self):
-        blocks = self.client.build_page_blocks("## 소제목")
-        assert len(blocks) == 1
-        assert blocks[0]["type"] == "heading_2"
-
-    def test_build_page_blocks_heading3(self):
-        blocks = self.client.build_page_blocks("### 하위제목")
-        assert len(blocks) == 1
-        assert blocks[0]["type"] == "heading_3"
-
-    def test_build_page_blocks_bullet_dash(self):
-        blocks = self.client.build_page_blocks("- 항목")
-        assert blocks[0]["type"] == "bulleted_list_item"
-
-    def test_build_page_blocks_bullet_asterisk(self):
-        blocks = self.client.build_page_blocks("* 항목")
+    @pytest.mark.parametrize("markdown", ["- 항목", "* 항목"])
+    def test_build_page_blocks_bullet(self, markdown):
+        blocks = self.client.build_page_blocks(markdown)
         assert blocks[0]["type"] == "bulleted_list_item"
 
     def test_build_page_blocks_divider(self):
@@ -514,20 +505,17 @@ class TestNotionClient:
         assert blocks[0]["code"]["language"] == "plain text"
         assert "some code" in blocks[0]["code"]["rich_text"][0]["text"]["content"]
 
-    def test_create_analysis_page_101_blocks(self):
+    @pytest.mark.parametrize("total,append_count,remainder", [
+        (101, 1, 1),
+        (200, 1, 100),
+    ])
+    def test_create_analysis_page_over_100_block_variants(self, total, append_count, remainder):
         self.mock_api.pages.create.return_value = {"id": "p", "url": "https://notion.so/p"}
-        blocks = [{"object": "block", "type": "paragraph", "paragraph": {"rich_text": []}} for _ in range(101)]
+        blocks = [{"object": "block", "type": "paragraph", "paragraph": {"rich_text": []}} for _ in range(total)]
         self.client.create_analysis_page("parent", "제목", blocks)
         assert len(self.mock_api.pages.create.call_args[1]["children"]) == 100
-        assert self.mock_api.blocks.children.append.call_count == 1
-        assert len(self.mock_api.blocks.children.append.call_args[1]["children"]) == 1
-
-    def test_create_analysis_page_200_blocks(self):
-        self.mock_api.pages.create.return_value = {"id": "p", "url": "https://notion.so/p"}
-        blocks = [{"object": "block", "type": "paragraph", "paragraph": {"rich_text": []}} for _ in range(200)]
-        self.client.create_analysis_page("parent", "제목", blocks)
-        assert self.mock_api.blocks.children.append.call_count == 1
-        assert len(self.mock_api.blocks.children.append.call_args[1]["children"]) == 100
+        assert self.mock_api.blocks.children.append.call_count == append_count
+        assert len(self.mock_api.blocks.children.append.call_args[1]["children"]) == remainder
 
     def test_create_analysis_page_zero_blocks(self):
         self.mock_api.pages.create.return_value = {"id": "p", "url": "https://notion.so/p"}
