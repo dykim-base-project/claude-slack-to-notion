@@ -131,7 +131,7 @@ def fetch_messages(
         messages = client.fetch_channel_messages(channel_id, limit, oldest)
         client.resolve_user_names(messages)
         filtered = [
-            {k: m[k] for k in ("ts", "user", "user_name", "text", "reply_count", "thread_ts") if k in m}
+            {k: m[k] for k in ("ts", "user", "user_name", "text", "resolved_text", "reply_count", "thread_ts") if k in m}
             for m in messages
         ]
         return json.dumps(filtered, ensure_ascii=False)
@@ -158,7 +158,7 @@ def fetch_thread(channel_id: str, thread_ts: str) -> str:
         messages = client.fetch_thread_replies(channel_id, thread_ts)
         client.resolve_user_names(messages)
         filtered = [
-            {k: m[k] for k in ("ts", "user", "user_name", "text", "reply_count", "thread_ts") if k in m}
+            {k: m[k] for k in ("ts", "user", "user_name", "text", "resolved_text", "reply_count", "thread_ts") if k in m}
             for m in messages
         ]
         return json.dumps(filtered, ensure_ascii=False)
@@ -215,12 +215,12 @@ def fetch_threads(
 
 @mcp.tool()
 def check_active_users() -> str:
-    """워크스페이스에서 현재 활성(온라인) 상태인 사용자 목록을 조회한다.
+    """워크스페이스에서 현재 로그인한 사용자 목록을 조회한다.
 
-    전체 사용자 중 현재 Slack에 접속하여 활동 중인 사용자만 반환한다.
+    전체 사용자 중 현재 Slack에 로그인하여 활동 중인 사용자만 반환한다.
 
     Returns:
-        활성 사용자 리스트를 JSON 형식 문자열로 반환
+        로그인한 사용자 리스트를 JSON 형식 문자열로 반환
         [{"id": "U123", "name": "홍길동", "real_name": "홍길동", "presence": "active"}]
     """
     try:
@@ -231,7 +231,7 @@ def check_active_users() -> str:
         return f"[에러] {e.message}"
     except Exception as e:
         logger.exception("예상치 못한 에러 발생")
-        return f"[에러] 활성 사용자 조회 실패: {e!s}"
+        return f"[에러] 로그인한 사용자 조회 실패: {e!s}"
 
 
 @mcp.tool()

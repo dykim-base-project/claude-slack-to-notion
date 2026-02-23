@@ -3,8 +3,6 @@
 import sys
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 
 class TestCreateNotionPage:
     """create_notion_page 도구 테스트."""
@@ -403,7 +401,6 @@ class TestSaveAnalysisResultErrors:
         """유효한 JSON 입력 시 정상 저장."""
         with patch("slack_to_notion.mcp_server.save_result") as mock_save:
             import json
-            from pathlib import Path
             mock_save.return_value = tmp_path / "analysis_test.json"
 
             from slack_to_notion.mcp_server import save_analysis_result
@@ -515,7 +512,7 @@ class TestFetchMessagesFieldFiltering:
             result = json.loads(fetch_messages("C001", limit=1))
 
             msg = result[0]
-            allowed = {"ts", "user", "user_name", "text", "reply_count", "thread_ts"}
+            allowed = {"ts", "user", "user_name", "text", "resolved_text", "reply_count", "thread_ts"}
             assert set(msg.keys()).issubset(allowed)
             assert "blocks" not in msg
             assert "reactions" not in msg

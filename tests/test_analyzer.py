@@ -1,8 +1,5 @@
 """분석 모듈 단위 테스트."""
 
-import json
-from pathlib import Path
-
 import pytest
 
 from slack_to_notion.analyzer import (

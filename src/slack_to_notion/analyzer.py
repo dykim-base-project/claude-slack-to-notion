@@ -62,7 +62,7 @@ def format_messages_for_analysis(messages: list[dict], channel_name: str) -> str
     for msg in messages:
         ts = msg.get("ts", "")
         user = msg.get("user_name", msg.get("user", "Unknown"))
-        text = msg.get("text", "")
+        text = msg.get("resolved_text", msg.get("text", ""))
         reply_count = msg.get("reply_count", 0)
 
         timestamp_str = _format_timestamp(ts)
@@ -107,7 +107,7 @@ def format_threads_for_analysis(
         for msg in messages:
             ts = msg.get("ts", "")
             user = msg.get("user_name", msg.get("user", "Unknown"))
-            text = msg.get("text", "")
+            text = msg.get("resolved_text", msg.get("text", ""))
 
             timestamp_str = _format_timestamp(ts)
             context_lines.append(f"{user} ({timestamp_str}) \u2014 {text}")

@@ -3,6 +3,8 @@
 slack_sdk를 사용하여 채널 메시지와 스레드를 수집한다.
 """
 
+import re
+
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 from slack_sdk.http_retry.builtin_handlers import RateLimitErrorRetryHandler
@@ -245,13 +247,13 @@ class SlackClient:
             raise SlackClientError(self._format_error_message(e)) from e
 
     def get_active_users(self) -> list[dict]:
-        """현재 활성 상태인 사용자 목록 조회.
+        """현재 로그인한 사용자 목록 조회.
 
         워크스페이스 전체 사용자를 조회한 뒤, 각 사용자의
-        온라인 상태를 확인하여 활성(active) 사용자만 반환한다.
+        온라인 상태를 확인하여 로그인한(active) 사용자만 반환한다.
 
         Returns:
-            활성 사용자 리스트 [{"id", "name", "real_name", "presence"}]
+            로그인한 사용자 리스트 [{"id", "name", "real_name", "presence"}]
 
         Raises:
             SlackClientError: API 호출 실패 시
@@ -270,22 +272,34 @@ class SlackClient:
 
         return active_users
 
+    def _resolve_mentions(self, text: str) -> str:
+        """메시지 텍스트 내의 <@UXXX> 멘션을 @표시이름으로 치환."""
+        def replace_mention(match: re.Match) -> str:
+            user_id = match.group(1)
+            name = self.get_user_name(user_id)
+            return f"@{name}"
+        return re.sub(r"<@([UW][A-Z0-9]+)>", replace_mention, text)
+
     def resolve_user_names(self, messages: list[dict]) -> list[dict]:
         """메시지 리스트의 user ID를 표시 이름으로 변환.
 
-        각 메시지에 user_name 필드를 추가한다.
-        원본 user 필드는 유지된다.
+        각 메시지에 user_name 필드를 추가하고,
+        텍스트 내 멘션(<@UXXX>)을 표시 이름으로 치환한 resolved_text 필드를 추가한다.
+        원본 user, text 필드는 유지된다.
 
         Args:
             messages: Slack 메시지 리스트
 
         Returns:
-            user_name 필드가 추가된 메시지 리스트
+            user_name, resolved_text 필드가 추가된 메시지 리스트
         """
         for msg in messages:
             user_id = msg.get("user")
             if user_id:
                 msg["user_name"] = self.get_user_name(user_id)
+            text = msg.get("text", "")
+            if text:
+                msg["resolved_text"] = self._resolve_mentions(text)
         return messages
 
     def _format_error_message(self, error: SlackApiError) -> str:
