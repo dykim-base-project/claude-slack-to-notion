@@ -110,6 +110,28 @@ def list_channels() -> str:
 
 
 @mcp.tool()
+def list_dms() -> str:
+    """Slack DM(다이렉트 메시지) 목록을 조회한다.
+
+    1:1 DM과 그룹 DM을 조회한다.
+    반환된 id는 fetch_messages, fetch_thread 등에 그대로 사용 가능하다.
+
+    Returns:
+        DM 정보 리스트를 JSON 형식 문자열로 반환
+        [{"id": "D123", "name": "DM: 김동영", "is_dm": true, "is_group_dm": false}]
+    """
+    try:
+        client = _get_slack_client()
+        dms = client.list_dms()
+        return json.dumps(dms, ensure_ascii=False)
+    except SlackClientError as e:
+        return f"[에러] {e.message}"
+    except Exception as e:
+        logger.exception("예상치 못한 에러 발생")
+        return f"[에러] DM 목록 조회 실패: {e!s}"
+
+
+@mcp.tool()
 def fetch_messages(
     channel_id: str,
     limit: int = 100,

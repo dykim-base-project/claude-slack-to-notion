@@ -60,6 +60,65 @@ class TestCreateNotionPage:
             assert "에러" in result
 
 
+class TestListDMs:
+    """list_dms 도구 테스트."""
+
+    def test_list_dms_success(self):
+        """JSON 반환, is_dm=True 확인."""
+        import json
+        env = {"SLACK_BOT_TOKEN": "xoxb-fake"}
+        with patch.dict("os.environ", env, clear=False), \
+             patch("slack_to_notion.mcp_server._slack_client", None), \
+             patch("slack_to_notion.slack_client.WebClient") as mock_cls:
+            mock_api = mock_cls.return_value
+            mock_api.conversations_list.return_value = {
+                "channels": [
+                    {"id": "D001", "user": "U001", "is_mpim": False},
+                ],
+                "response_metadata": {"next_cursor": ""},
+            }
+            mock_api.users_info.return_value = {
+                "user": {"profile": {"display_name": "김동영", "real_name": ""}}
+            }
+
+            from slack_to_notion.mcp_server import list_dms
+            result = list_dms()
+            parsed = json.loads(result)
+            assert len(parsed) == 1
+            assert parsed[0]["is_dm"] is True
+            assert parsed[0]["name"] == "DM: 김동영"
+
+    def test_list_dms_slack_client_error(self):
+        """SlackClientError 발생 시 [에러] 반환."""
+        env = {"SLACK_BOT_TOKEN": "xoxb-fake"}
+        with patch.dict("os.environ", env, clear=False), \
+             patch("slack_to_notion.mcp_server._slack_client", None), \
+             patch("slack_to_notion.slack_client.WebClient") as mock_cls:
+            from slack_sdk.errors import SlackApiError
+            error_response = MagicMock()
+            error_response.get.side_effect = lambda key, default="": "invalid_auth" if key == "error" else default
+            mock_cls.return_value.conversations_list.side_effect = SlackApiError(
+                message="err", response=error_response
+            )
+
+            from slack_to_notion.mcp_server import list_dms
+            result = list_dms()
+            assert "[에러]" in result
+
+    def test_list_dms_unexpected_exception(self):
+        """예상치 못한 예외 발생 시 [에러] 반환."""
+        env = {"SLACK_BOT_TOKEN": "xoxb-fake"}
+        with patch.dict("os.environ", env, clear=False), \
+             patch("slack_to_notion.mcp_server._slack_client", None), \
+             patch("slack_to_notion.slack_client.WebClient") as mock_cls:
+            mock_cls.return_value.conversations_list.side_effect = RuntimeError("네트워크 오류")
+
+            from slack_to_notion.mcp_server import list_dms
+            result = list_dms()
+            assert "[에러]" in result
+            assert "DM 목록 조회 실패" in result
+
+
 class TestFetchThreads:
     """fetch_threads 도구 테스트."""
 
