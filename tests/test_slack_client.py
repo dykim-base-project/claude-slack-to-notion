@@ -119,6 +119,131 @@ class TestSlackClientListChannels:
         assert channels[1]["name"] == "ch2"
 
 
+class TestSlackClientListDMs:
+    """DM 목록 조회 테스트."""
+
+    def setup_method(self):
+        with patch("slack_to_notion.slack_client.WebClient"):
+            self.client = SlackClient("xoxb-fake-token")
+            self.mock_api = self.client.client
+
+    def test_list_dms_success(self):
+        """im + mpim 모두 정상 반환, 이름 포맷 확인."""
+        self.mock_api.conversations_list.return_value = {
+            "channels": [
+                {"id": "D001", "user": "U001", "is_mpim": False},
+                {"id": "G001", "name": "mpdm-alice--bob-1", "is_mpim": True},
+            ],
+            "response_metadata": {"next_cursor": ""},
+        }
+        self.mock_api.users_info.return_value = {
+            "user": {"profile": {"display_name": "김동영", "real_name": ""}}
+        }
+
+        dms = self.client.list_dms()
+        assert len(dms) == 2
+        assert dms[0]["id"] == "D001"
+        assert dms[0]["name"] == "DM: 김동영"
+        assert dms[0]["is_dm"] is True
+        assert dms[0]["is_group_dm"] is False
+        assert dms[1]["id"] == "G001"
+        assert dms[1]["name"] == "Group DM: alice, bob"
+        assert dms[1]["is_group_dm"] is True
+
+    def test_list_dms_im_only_fallback(self):
+        """im,mpim 실패 → im only 폴백."""
+        call_count = 0
+
+        def side_effect(**kwargs):
+            nonlocal call_count
+            call_count += 1
+            types = kwargs.get("types", "")
+            limit = kwargs.get("limit", 200)
+            if call_count == 1 and types == "im,mpim" and limit == 1:
+                raise _make_slack_error("missing_scope")
+            if call_count == 2 and types == "im" and limit == 1:
+                return {"channels": [], "response_metadata": {"next_cursor": ""}}
+            return {
+                "channels": [
+                    {"id": "D001", "user": "U001", "is_mpim": False},
+                ],
+                "response_metadata": {"next_cursor": ""},
+            }
+
+        self.mock_api.conversations_list.side_effect = side_effect
+        self.mock_api.users_info.return_value = {
+            "user": {"profile": {"display_name": "테스트", "real_name": ""}}
+        }
+
+        dms = self.client.list_dms()
+        assert len(dms) == 1
+        # 세 번째 호출(실제 목록 조회)에서 im만 사용 확인
+        third_call_kwargs = self.mock_api.conversations_list.call_args_list[2][1]
+        assert third_call_kwargs["types"] == "im"
+
+    def test_list_dms_no_scope_raises(self):
+        """모든 스코프 없음 → SlackClientError."""
+        self.mock_api.conversations_list.side_effect = _make_slack_error("missing_scope")
+
+        with pytest.raises(SlackClientError) as exc_info:
+            self.client.list_dms()
+        assert "im:read" in exc_info.value.message
+
+    def test_list_dms_pagination(self):
+        """페이지네이션 커서 동작."""
+        self.mock_api.conversations_list.side_effect = [
+            # scope 확인 호출
+            {"channels": [], "response_metadata": {"next_cursor": ""}},
+            # 첫 페이지
+            {
+                "channels": [{"id": "D001", "user": "U001", "is_mpim": False}],
+                "response_metadata": {"next_cursor": "cursor_abc"},
+            },
+            # 두 번째 페이지
+            {
+                "channels": [{"id": "D002", "user": "U002", "is_mpim": False}],
+                "response_metadata": {"next_cursor": ""},
+            },
+        ]
+        self.mock_api.users_info.return_value = {
+            "user": {"profile": {"display_name": "유저", "real_name": ""}}
+        }
+
+        dms = self.client.list_dms()
+        assert len(dms) == 2
+        assert dms[0]["id"] == "D001"
+        assert dms[1]["id"] == "D002"
+
+    def test_list_dms_user_name_resolved(self):
+        """1:1 DM에서 get_user_name 호출 확인."""
+        self.mock_api.conversations_list.return_value = {
+            "channels": [
+                {"id": "D001", "user": "U001", "is_mpim": False},
+            ],
+            "response_metadata": {"next_cursor": ""},
+        }
+        self.mock_api.users_info.return_value = {
+            "user": {"profile": {"display_name": "홍길동", "real_name": ""}}
+        }
+
+        dms = self.client.list_dms()
+        assert dms[0]["name"] == "DM: 홍길동"
+        self.mock_api.users_info.assert_called_once_with(user="U001")
+
+    def test_list_dms_group_dm_name_formatted(self):
+        """mpdm-a--b--1 → 'Group DM: a, b'."""
+        self.mock_api.conversations_list.return_value = {
+            "channels": [
+                {"id": "G001", "name": "mpdm-alice--bob--charlie-1", "is_mpim": True},
+            ],
+            "response_metadata": {"next_cursor": ""},
+        }
+
+        dms = self.client.list_dms()
+        assert dms[0]["name"] == "Group DM: alice, bob, charlie"
+        assert dms[0]["is_group_dm"] is True
+
+
 class TestSlackClientFetchMessages:
     """메시지 조회 테스트."""
 

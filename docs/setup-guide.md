@@ -121,6 +121,12 @@ Slack 채널의 메시지를 읽어오려면 Slack App을 만들고 토큰을 �
 | `channels:read` | 채널 목록을 조회합니다 |
 | `groups:history` | 비공개 채널의 메시지를 읽습니다 |
 | `users:read` | 메시지 작성자의 이름을 확인합니다 |
+| `im:read` | 1:1 DM 목록을 조회합니다 (선택) |
+| `im:history` | 1:1 DM 메시지를 읽습니다 (선택) |
+| `mpim:read` | 그룹 DM 목록을 조회합니다 (선택) |
+| `mpim:history` | 그룹 DM 메시지를 읽습니다 (선택) |
+
+> **참고**: DM 스코프는 선택 사항입니다. 추가하지 않아도 채널 기능은 정상 동작합니다.
 
 6. 페이지 상단으로 스크롤하여 **"Install to Workspace"** 클릭 → **"허용"** 클릭
 7. **"User OAuth Token"** 이 표시됩니다. 복사 버튼을 눌러 토큰을 복사합니다. (`xoxp-`로 시작하는 문자열)
@@ -146,6 +152,10 @@ Slack 채널의 메시지를 읽어오려면 Slack App을 만들고 토큰을 �
 | `channels:read` | 채널 목록을 조회합니다 |
 | `groups:history` | 비공개 채널의 메시지를 읽습니다 |
 | `users:read` | 메시지 작성자의 이름을 확인합니다 |
+| `im:read` | 1:1 DM 목록을 조회합니다 (선택) |
+| `im:history` | 1:1 DM 메시지를 읽습니다 (선택) |
+| `mpim:read` | 그룹 DM 목록을 조회합니다 (선택) |
+| `mpim:history` | 그룹 DM 메시지를 읽습니다 (선택) |
 
 > 비공개 채널 목록도 조회하려면 `groups:read` 스코프를 추가하세요. 없어도 공개 채널은 정상 동작합니다.
 

@@ -81,6 +81,93 @@ class SlackClient:
         except SlackApiError as e:
             raise SlackClientError(self._format_error_message(e)) from e
 
+    def list_dms(self) -> list[dict]:
+        """DM(다이렉트 메시지) 목록 조회.
+
+        1:1 DM과 그룹 DM을 조회한다.
+        반환된 id는 fetch_messages, fetch_thread 등에 그대로 사용 가능하다.
+
+        Returns:
+            DM 정보 리스트 [{"id", "name", "is_dm": True, "is_group_dm": bool}]
+
+        Raises:
+            SlackClientError: API 호출 실패 시
+        """
+        try:
+            dms: list[dict] = []
+            cursor = None
+            types = "im,mpim"
+
+            try:
+                self.client.conversations_list(types=types, limit=1)
+            except SlackApiError as e:
+                if e.response.get("error") == "missing_scope":
+                    # mpim 스코프 없으면 im만 시도
+                    try:
+                        self.client.conversations_list(types="im", limit=1)
+                        types = "im"
+                    except SlackApiError as e2:
+                        if e2.response.get("error") == "missing_scope":
+                            raise SlackClientError(
+                                "DM 조회에 필요한 권한이 없습니다. "
+                                "Slack App 설정에서 im:read 스코프를 추가하세요."
+                            ) from e2
+                        raise
+                else:
+                    raise
+
+            while True:
+                response = self.client.conversations_list(
+                    types=types,
+                    cursor=cursor,
+                    limit=200,
+                )
+
+                for conv in response["channels"]:
+                    is_mpim = conv.get("is_mpim", False)
+                    if is_mpim:
+                        name = self._format_group_dm_name(conv.get("name", ""))
+                    else:
+                        user_id = conv.get("user", "")
+                        if user_id:
+                            user_name = self.get_user_name(user_id)
+                            name = f"DM: {user_name}"
+                        else:
+                            name = f"DM: {conv.get('id', 'unknown')}"
+
+                    dms.append({
+                        "id": conv["id"],
+                        "name": name,
+                        "is_dm": True,
+                        "is_group_dm": is_mpim,
+                    })
+
+                cursor = response.get("response_metadata", {}).get("next_cursor")
+                if not cursor:
+                    break
+
+            return dms
+
+        except SlackApiError as e:
+            raise SlackClientError(self._format_error_message(e)) from e
+
+    def _format_group_dm_name(self, raw_name: str) -> str:
+        """그룹 DM 이름을 포맷팅한다.
+
+        mpdm-alice--bob--charlie-1 → "Group DM: alice, bob, charlie"
+
+        Args:
+            raw_name: Slack 그룹 DM 원본 이름
+
+        Returns:
+            포맷팅된 이름
+        """
+        match = re.match(r"^mpdm-(.+)-\d+$", raw_name)
+        if match:
+            members = match.group(1).split("--")
+            return f"Group DM: {', '.join(members)}"
+        return f"Group DM: {raw_name}"
+
     def fetch_channel_messages(
         self,
         channel_id: str,
