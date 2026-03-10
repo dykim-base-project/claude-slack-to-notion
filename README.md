@@ -17,9 +17,38 @@ graph LR
 
 사용하는 환경에 맞는 방법을 선택하세요.
 
-### Claude Desktop 앱 (일반 사용자)
+### Desktop Extension 설치 (권장)
 
-Claude Desktop 앱을 사용하고 있다면 아래 순서대로 진행하세요.
+`.mcpb` 파일을 사용하면 JSON 수동 편집 없이 원클릭으로 설치할 수 있습니다.
+
+**사전 준비: 토큰 발급** (처음 한 번만)
+
+설치 시 아래 3개의 값이 필요합니다. 미리 준비해두세요:
+
+| 항목 | 발급 방법 | 형식 |
+|------|-----------|------|
+| Slack User Token | [api.slack.com/apps](https://api.slack.com/apps) → 앱 선택 → OAuth & Permissions → User OAuth Token | `xoxp-...` |
+| Notion API Key | [notion.so/profile/integrations](https://www.notion.so/profile/integrations) → 새 API 통합 생성 | `ntn_...` |
+| Notion Page URL | 결과를 저장할 Notion 페이지 → 우측 상단 **공유** → **링크 복사** | `https://www.notion.so/...` |
+
+> 토큰 발급이 처음이라면 [설치 및 토큰 설정 가이드](docs/setup-guide.md)에서 스크린샷과 함께 단계별로 안내합니다.
+
+**설치**
+
+1. [GitHub Releases](https://github.com/dykim-base-project/claude-slack-to-notion/releases)에서 최신 `slack-to-notion-mcp.mcpb` 파일을 다운로드합니다
+2. 다운로드한 `.mcpb` 파일을 **더블클릭**합니다
+3. Claude Desktop이 열리며 토큰 입력 화면이 나타납니다 — 위에서 준비한 3개의 값을 붙여넣으세요
+4. **확장 활성화**: 설치 후 **설정**(`⌘ + ,`) → **Extensions** → `Slack to Notion` 항목의 **토글을 켜주세요** (설치 직후에는 비활성화 상태입니다)
+5. 설치 완료! 입력창 우측 하단에 도구 아이콘이 나타나면 정상입니다
+
+> 업데이트할 때도 새 `.mcpb` 파일을 다운로드하여 동일하게 설치하면 됩니다.
+
+### 수동 설치 (고급)
+
+JSON 설정 파일을 직접 편집하는 방법입니다. Desktop Extension 설치가 안 되는 경우에 사용하세요.
+
+<details>
+<summary>수동 설치 방법 보기</summary>
 
 **1단계: uv 설치 (처음 한 번만)**
 
@@ -97,9 +126,11 @@ Claude Desktop 앱을 사용하고 있다면 아래 순서대로 진행하세요
 
 파일을 저장(`⌘ + S`)하고 Claude Desktop을 **완전히 종료**(Dock에서 우클릭 → 종료)한 뒤 다시 실행합니다.
 
-정상 연결 시: 입력창 우측 하단에 도구 아이콘(🔧)이 나타납니다.
+정상 연결 시: 입력창 우측 하단에 도구 아이콘이 나타납니다.
 
 > 재시작해도 오류가 나오면 [문제 해결 가이드](docs/troubleshooting.md)를 확인하세요.
+
+</details>
 
 ### Claude Code CLI (개발자)
 

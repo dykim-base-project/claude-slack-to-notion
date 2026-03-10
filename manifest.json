@@ -1,0 +1,53 @@
+{
+  "manifest_version": "0.4",
+  "name": "slack-to-notion-mcp",
+  "version": "0.3.2",
+  "display_name": "Slack to Notion",
+  "description": "Slack 메시지/스레드를 분석하여 Notion 페이지로 정리하는 MCP 서버",
+  "long_description": "Slack 채널의 대화를 AI로 분석하여 Notion 페이지로 정리합니다. 회의록 정리, 이슈 추출, 주제별 분류 등 분석 방향은 자유롭게 지정할 수 있습니다. 토큰 발급 방법은 아래 documentation 링크를 참고하세요.",
+  "author": {
+    "name": "dykim-base-project"
+  },
+  "homepage": "https://github.com/dykim-base-project/claude-slack-to-notion",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dykim-base-project/claude-slack-to-notion.git"
+  },
+  "documentation": "https://github.com/dykim-base-project/claude-slack-to-notion/blob/main/docs/setup-guide.md",
+  "support": "https://github.com/dykim-base-project/claude-slack-to-notion/issues",
+  "user_config": {
+    "slack_user_token": {
+      "type": "string",
+      "title": "Slack User Token",
+      "description": "Slack 앱 설정(api.slack.com/apps) → OAuth & Permissions → User OAuth Token (xoxp-로 시작)",
+      "sensitive": true,
+      "required": true
+    },
+    "notion_api_key": {
+      "type": "string",
+      "title": "Notion API Key",
+      "description": "Notion 개발자 페이지(notion.so/profile/integrations)에서 생성한 API Key (ntn_로 시작)",
+      "sensitive": true,
+      "required": true
+    },
+    "notion_parent_page_url": {
+      "type": "string",
+      "title": "Notion Parent Page URL",
+      "description": "분석 결과가 저장될 Notion 페이지의 URL (페이지 우측 상단 '공유' → '링크 복사')",
+      "required": true
+    }
+  },
+  "server": {
+    "type": "uv",
+    "entry_point": "src/slack_to_notion/mcp_server.py",
+    "mcp_config": {
+      "command": "uv",
+      "args": ["run", "slack-to-notion-mcp"],
+      "env": {
+        "SLACK_USER_TOKEN": "${user_config.slack_user_token}",
+        "NOTION_API_KEY": "${user_config.notion_api_key}",
+        "NOTION_PARENT_PAGE_URL": "${user_config.notion_parent_page_url}"
+      }
+    }
+  }
+}

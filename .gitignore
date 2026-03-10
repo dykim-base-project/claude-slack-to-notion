@@ -24,3 +24,6 @@ build/
 *.swp
 *.swo
 *~
+
+# Build artifacts
+*.mcpb
