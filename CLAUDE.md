@@ -73,7 +73,7 @@ PlantUML 사용 시: `example.puml` → `example.svg` 필수 생성
 |------|------|-----|
 | `.claude/settings.json` | 공통 설정 | 추적 |
 | `.claude/settings.local.json` | 로컬 전용 | 무시 |
-| `.claude/skills/` | 워크플로우 스킬 (`/spec`, `/implement`, `/commit` 등) | 추적 |
+| `.claude/skills/` | 프로젝트 전용 스킬 (`/post` 등) | 추적 |
 
 ## 프로젝트별 커스텀
 
@@ -117,9 +117,9 @@ main ────────────────●─────
 
 ### 플러그인 관리
 
-- claude-devex 플러그인 기반 이슈 사이클 워크플로우 사용
-- 플러그인 버전은 `.claude/.devex-version`으로 관리
-- 업데이트: `curl -sL https://raw.githubusercontent.com/idean3885/claude-devex/main/setup.sh | bash -s -- --update`
+- claude-devex 마켓플레이스 플러그인 기반 이슈 사이클 워크플로우
+- 설치: `claude plugins marketplace add https://github.com/idean3885/claude-devex.git && claude plugins install claude-devex@claude-devex`
+- 업데이트: `claude plugins update claude-devex@claude-devex`
 
 ### 배치 작업 효율화 규칙
 
